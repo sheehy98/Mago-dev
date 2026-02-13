@@ -192,7 +192,7 @@ def test_extract_table_name_from_real_file():
     When we call extract_table_name
     Then the schema.table name is extracted from the SQL
     """
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
 
     # Use meta/theme/create.sql as a known file
     theme_sql = os.path.join(tables_dir, "meta/theme/create.sql")
@@ -560,8 +560,8 @@ def test_load_schema_tables_skips_nonexistent_schema():
     """
 
     # Resolve tables directory
-    api_dir = Path(__file__).parent.parent.parent.parent
-    tables_dir = api_dir.parent / "data" / "tables"
+    project_root = Path(__file__).parent.parent.parent.parent
+    tables_dir = project_root / "data" / "tables"
 
     # Include a schema that definitely doesn't exist
     result = load_schema_tables_from_catalogs(tables_dir, ["meta", "nonexistent_schema_xyz"])
@@ -638,7 +638,7 @@ def test_export_catalogs_returns_zero_without_catalog_table():
     conn.commit()
 
     try:
-        tables_dir = Path(__file__).parent.parent.parent.parent.parent / "data" / "tables"
+        tables_dir = Path(__file__).parent.parent.parent.parent / "data" / "tables"
         result = export_catalogs_to_csv(tables_dir)
         assert result == 0
 

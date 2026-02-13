@@ -21,7 +21,7 @@ def test_find_create_sql_files_all():
     """
     import os
 
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_create_sql_files(tables_dir)
     assert len(files) > 0
     assert all(f.endswith("create.sql") for f in files)
@@ -37,7 +37,7 @@ def test_find_create_sql_files_with_usernames():
     """
     import os
 
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_create_sql_files(tables_dir, usernames=["meta"])
     assert len(files) > 0
     assert all("meta" in f for f in files)
@@ -53,7 +53,7 @@ def test_find_create_sql_files_nonexistent_username():
     """
     import os
 
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_create_sql_files(tables_dir, usernames=["nonexistent_user_xyz"])
     assert files == []
 
@@ -111,7 +111,7 @@ def test_create_table_with_invalid_sql():
     import shutil
 
     # Create temp directory with invalid SQL
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     test_dir = os.path.join(tables_dir, "_etl_test_invalid")
     table_dir = os.path.join(test_dir, "bad_table")
     os.makedirs(table_dir, exist_ok=True)
@@ -165,6 +165,6 @@ def test_create_table_dependency_order():
     assert "failed_tables" not in data
 
     # Verify count matches available SQL files
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     sql_files = find_create_sql_files(tables_dir, usernames=["meta"])
     assert data["tables_created"] == len(sql_files)

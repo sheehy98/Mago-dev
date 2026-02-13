@@ -35,7 +35,7 @@ def test_find_seed_csv_files_all():
     When we call find_seed_csv_files with no filter
     Then all seed.csv files are returned except meta/catalog
     """
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_seed_csv_files(tables_dir)
     assert len(files) > 0
     assert all(f.endswith("seed.csv") for f in files)
@@ -51,7 +51,7 @@ def test_find_seed_csv_files_with_usernames():
     When we call find_seed_csv_files with a username filter
     Then only seed.csv files for that username are returned
     """
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_seed_csv_files(tables_dir, usernames=["meta"])
     assert len(files) > 0
     assert all("meta" in f for f in files)
@@ -65,7 +65,7 @@ def test_find_seed_csv_files_nonexistent_username():
     When we call find_seed_csv_files with that username
     Then an empty list is returned
     """
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_seed_csv_files(tables_dir, usernames=["nonexistent_user_xyz"])
     assert files == []
 
@@ -83,7 +83,7 @@ def test_find_catalog_csv_files_default_schemas():
     When we call find_catalog_csv_files with no filter
     Then catalog.csv files from default schemas are returned
     """
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_catalog_csv_files(tables_dir)
     assert len(files) > 0
     assert all(f.endswith("catalog.csv") for f in files)
@@ -97,7 +97,7 @@ def test_find_catalog_csv_files_specific_schema():
     When we call find_catalog_csv_files with a schema filter
     Then only catalog.csv files for that schema are returned
     """
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_catalog_csv_files(tables_dir, schemas=["meta"])
     assert len(files) > 0
     assert all("meta" in f for f in files)
@@ -111,7 +111,7 @@ def test_find_catalog_csv_files_nonexistent_schema():
     When we call find_catalog_csv_files with that schema
     Then an empty list is returned
     """
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_catalog_csv_files(tables_dir, schemas=["nonexistent_schema_xyz"])
     assert files == []
 
@@ -129,7 +129,7 @@ def test_extract_table_name_from_create_sql():
     When we call extract_table_name_from_create_sql
     Then the schema.table name is extracted from the SQL
     """
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     from dev.etl.create_tables import find_create_sql_files
 
     sql_files = find_create_sql_files(tables_dir, usernames=["meta"])
@@ -305,7 +305,7 @@ def test_has_serial_column_with_serial():
     When we call has_serial_column
     Then it returns True
     """
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
 
     # meta.theme has ID SERIAL
     theme_sql = os.path.join(tables_dir, "meta/theme/create.sql")
@@ -321,7 +321,7 @@ def test_has_serial_column_without_serial():
     When we call has_serial_column
     Then it returns False
     """
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
 
     # meta.catalog has no SERIAL columns
     catalog_sql = os.path.join(tables_dir, "meta/catalog/create.sql")
@@ -541,8 +541,8 @@ def test_seed_csv_without_create_sql_is_skipped():
     Then it skips that file and returns success with 0 tables
     """
     # Create a seed.csv in data/tables without create.sql
-    api_dir = Path(__file__).parent.parent.parent.parent
-    tables_dir = api_dir.parent / "data" / "tables"
+    project_root = Path(__file__).parent.parent.parent.parent
+    tables_dir = project_root / "data" / "tables"
     test_dir = tables_dir / "etl_test_no_create" / "test_table"
     test_dir.mkdir(parents=True, exist_ok=True)
     seed_file = test_dir / "seed.csv"
@@ -609,8 +609,8 @@ def test_seed_table_with_persistent_failure():
     conn.close()
 
     # Create data files: create.sql matches DB, but seed.csv has wrong column count
-    api_dir = Path(__file__).parent.parent.parent.parent
-    tables_dir = api_dir.parent / "data" / "tables"
+    project_root = Path(__file__).parent.parent.parent.parent
+    tables_dir = project_root / "data" / "tables"
     test_dir = tables_dir / "etl_test_fail" / "bad_table"
     test_dir.mkdir(parents=True, exist_ok=True)
 

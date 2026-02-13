@@ -340,7 +340,7 @@ def test_build_dependency_graph_real_files():
     from dev.etl.create_tables import find_create_sql_files
     from dev.etl.seed_tables import extract_table_name_from_create_sql
 
-    tables_dir = os.path.join(os.path.dirname(__file__), "../../../../data/tables")
+    tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     sql_files = find_create_sql_files(tables_dir, usernames=["meta"])
 
     # Act
