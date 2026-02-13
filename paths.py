@@ -18,4 +18,4 @@ BUCKETS_DIR = PROJECT_ROOT / "data" / "buckets"
 SCHEMA_MMD_PATH = PROJECT_ROOT / "data" / "schema.mmd"
 
 # Frontend source
-FRONTEND_SRC = PROJECT_ROOT / "frontend" / "vite" / "src"
+FRONTEND_SRC = PROJECT_ROOT / "frontend" / "src"

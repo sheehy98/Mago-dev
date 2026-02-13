@@ -52,7 +52,7 @@ def find_translation_folders(root_path: str) -> list[str]:
     """
     Recursively find all translations/ folders in the src directory
 
-    @param root_path (str): Root path to search (should be frontend/vite/src)
+    @param root_path (str): Root path to search (should be frontend/src)
     @returns List[str] - List of paths to translations folders
     """
 
@@ -77,7 +77,7 @@ def find_component_files(root_path: str) -> list[str]:
     - Utility files in utils/ directories
     - Provider files in providers/ directories (they don't use translations)
 
-    @param root_path (str): Root path to search (should be frontend/vite/src)
+    @param root_path (str): Root path to search (should be frontend/src)
     @returns List[str] - List of paths to component files
     """
 
@@ -257,7 +257,7 @@ def get_expected_translation_path_from_component(component_file_path: str, src_r
     """
     Get the expected translation path based on component location
 
-    Component: frontend/vite/src/templates/Recipes/Recipes.tsx
+    Component: frontend/src/templates/Recipes/Recipes.tsx
     Expected path: templates/Recipes
 
     @param component_file_path (str): Full path to component file
@@ -741,7 +741,6 @@ def validate_global_translations(project_root: str) -> list[dict[str, Any]]:
     en_json_path = (
         root
         / "frontend"
-        / "vite"
         / "src"
         / "providers"
         / "TranslationProvider"

@@ -137,7 +137,7 @@ def find_incomplete_folders(src_root: str) -> list[str]:
     """
     Find all translations/ folders under src_root that are missing language files
 
-    @param src_root (str): Root path to scan (e.g., frontend/vite/src)
+    @param src_root (str): Root path to scan (e.g., frontend/src)
     @returns list[str] - List of folder paths that need translation generation
     """
 
