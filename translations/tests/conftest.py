@@ -53,7 +53,7 @@ def redirect_project_root(tmp_path: Path) -> Path:
 
     # Copy global en.json
     en_dest = (
-        project / "frontend" / "vite" / "src"
+        project / "frontend" / "src"
         / "providers" / "TranslationProvider" / "translations"
     )
     en_dest.mkdir(parents=True)
@@ -63,7 +63,7 @@ def redirect_project_root(tmp_path: Path) -> Path:
     )
 
     paths.PROJECT_ROOT = project
-    paths.FRONTEND_SRC = project / "frontend" / "vite" / "src"
+    paths.FRONTEND_SRC = project / "frontend" / "src"
     return project
 
 
@@ -469,7 +469,7 @@ def global_translations_extra_key(tmp_path):
 
     # Modify the copied en.json
     en_json = (
-        project / "frontend" / "vite" / "src"
+        project / "frontend" / "src"
         / "providers" / "TranslationProvider" / "translations" / "en.json"
     )
     data = json.loads(en_json.read_text(encoding="utf-8"))
@@ -488,7 +488,7 @@ def global_translations_missing_key(tmp_path):
 
     # Modify the copied en.json
     en_json = (
-        project / "frontend" / "vite" / "src"
+        project / "frontend" / "src"
         / "providers" / "TranslationProvider" / "translations" / "en.json"
     )
     data = json.loads(en_json.read_text(encoding="utf-8"))
@@ -508,7 +508,7 @@ def global_translations_file_missing(tmp_path):
 
     # Delete from the copy
     en_json = (
-        project / "frontend" / "vite" / "src"
+        project / "frontend" / "src"
         / "providers" / "TranslationProvider" / "translations" / "en.json"
     )
     en_json.unlink()
@@ -539,7 +539,7 @@ def global_translations_invalid_json(tmp_path):
 
     # Corrupt the copy
     en_json = (
-        project / "frontend" / "vite" / "src"
+        project / "frontend" / "src"
         / "providers" / "TranslationProvider" / "translations" / "en.json"
     )
     en_json.write_text('{"invalid": "json"', encoding="utf-8")
