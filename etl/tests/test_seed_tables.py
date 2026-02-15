@@ -7,8 +7,9 @@ import os
 import tempfile
 from pathlib import Path
 
-# Module under test
-from dev.etl.create_tables import create_table
+# Source module
+from dev.db import get_connection
+from dev.etl.create_tables import create_table, find_create_sql_files
 from dev.etl.drop_tables import drop_table
 from dev.etl.seed_tables import (
     extract_table_name_from_create_sql,
@@ -130,8 +131,6 @@ def test_extract_table_name_from_create_sql():
     Then the schema.table name is extracted from the SQL
     """
     tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
-    from dev.etl.create_tables import find_create_sql_files
-
     sql_files = find_create_sql_files(tables_dir, usernames=["meta"])
     if sql_files:
         table_name = extract_table_name_from_create_sql(sql_files[0])
@@ -353,8 +352,6 @@ def test_reset_serial_sequence():
     When we call reset_serial_sequence
     Then the next sequence value is MAX(ID) + 1
     """
-    from dev.db import get_connection
-
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -398,8 +395,6 @@ def test_reset_serial_sequence_no_id_column():
     When we call reset_serial_sequence
     Then it returns without error
     """
-    from dev.db import get_connection
-
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -590,8 +585,6 @@ def test_seed_table_with_persistent_failure():
     When we call seed_table
     Then response includes failed_tables count
     """
-    from dev.db import get_connection
-
     # Create a test schema and table with a required column
     conn = get_connection()
     cursor = conn.cursor()

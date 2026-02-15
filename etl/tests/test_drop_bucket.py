@@ -8,8 +8,9 @@ import os
 # Third party
 import pytest
 
-# Module under test
+# Source module
 from dev.etl.drop_bucket import drop_bucket
+from dev.storage import get_s3_client
 
 
 #
@@ -84,8 +85,6 @@ def test_drop_bucket_actual_bucket():
     When we call drop_bucket with that bucket name
     Then the bucket is deleted
     """
-    from dev.storage import get_s3_client
-
     bucket_name = "test-drop-temp-xyz"
 
     # Create the bucket directly via storage client (drop first to ensure clean state)
@@ -118,8 +117,6 @@ def test_drop_bucket_with_contents():
     When we call drop_bucket
     Then objects are deleted first, then the bucket
     """
-    from dev.storage import get_s3_client
-
     bucket_name = "test-drop-with-contents"
 
     # Create bucket and add an object (drop first to ensure clean state)
@@ -148,8 +145,6 @@ def test_drop_multiple_buckets():
     When we call drop_bucket with those bucket names
     Then all specified buckets are dropped
     """
-    from dev.storage import get_s3_client
-
     # Create test buckets (drop first to ensure clean state)
     client = get_s3_client(endpoint_url=MINIO_ENDPOINT)
     test_buckets = ["test-drop-multi-a", "test-drop-multi-b"]

@@ -6,12 +6,14 @@
 import os
 import tempfile
 
-# Dev module
+# Source module
+from dev.etl.create_tables import find_create_sql_files
 from dev.etl.dependency_graph import (
     build_dependency_graph,
     parse_foreign_keys,
     topological_sort,
 )
+from dev.etl.seed_tables import extract_table_name_from_create_sql
 
 
 #
@@ -337,9 +339,6 @@ def test_build_dependency_graph_real_files():
     """
 
     # Arrange
-    from dev.etl.create_tables import find_create_sql_files
-    from dev.etl.seed_tables import extract_table_name_from_create_sql
-
     tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     sql_files = find_create_sql_files(tables_dir, usernames=["meta"])
 

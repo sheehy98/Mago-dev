@@ -2,7 +2,11 @@
 # Imports
 #
 
-# Module under test
+# Standard library
+import os
+import shutil
+
+# Source module
 from dev.etl.create_tables import create_table, find_create_sql_files
 from dev.etl.drop_tables import drop_table
 
@@ -19,8 +23,6 @@ def test_find_create_sql_files_all():
     When we call find_create_sql_files with no filter
     Then all create.sql files are returned
     """
-    import os
-
     tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_create_sql_files(tables_dir)
     assert len(files) > 0
@@ -35,8 +37,6 @@ def test_find_create_sql_files_with_usernames():
     When we call find_create_sql_files with a username filter
     Then only create.sql files for that username are returned
     """
-    import os
-
     tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_create_sql_files(tables_dir, usernames=["meta"])
     assert len(files) > 0
@@ -51,8 +51,6 @@ def test_find_create_sql_files_nonexistent_username():
     When we call find_create_sql_files with that username
     Then an empty list is returned
     """
-    import os
-
     tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     files = find_create_sql_files(tables_dir, usernames=["nonexistent_user_xyz"])
     assert files == []
@@ -107,9 +105,6 @@ def test_create_table_with_invalid_sql():
     When we call create_table targeting that directory
     Then the response includes failed_tables
     """
-    import os
-    import shutil
-
     # Create temp directory with invalid SQL
     tables_dir = os.path.join(os.path.dirname(__file__), "../../../data/tables")
     test_dir = os.path.join(tables_dir, "_etl_test_invalid")
@@ -151,8 +146,6 @@ def test_create_table_dependency_order():
     Then all tables are created successfully (no FK errors)
     And the number of created tables matches available SQL files
     """
-    import os
-
     # Arrange — drop meta schema so all tables must be recreated
     drop_table(schemas=["meta"])
 
