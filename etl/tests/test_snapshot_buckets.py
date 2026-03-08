@@ -36,7 +36,7 @@ MINIO_ENDPOINT = f"http://{os.getenv('MINIO_EXTERNAL_HOST', 'localhost')}:{os.ge
 #
 
 
-def test_snapshot_bucket_success():
+def test_snapshot_bucket_success(redirect_buckets_dir):
     """
     Story: Snapshot bucket saves bucket contents to filesystem
 
@@ -58,7 +58,7 @@ def test_snapshot_bucket_success():
     drop_bucket(buckets=[TEST_BUCKET])
 
 
-def test_snapshot_bucket_response_structure():
+def test_snapshot_bucket_response_structure(redirect_buckets_dir):
     """
     Story: Snapshot bucket returns proper response structure
 
@@ -124,9 +124,9 @@ def test_snapshot_bucket_full_sync_cycle(redirect_buckets_dir):
         data = snapshot_bucket(buckets=[bucket_name])
         assert data["buckets_snapshotted"][0]["downloaded"] == 2
 
-        # Verify files were downloaded to tmp_path
-        local_path_a = buckets_dir / user_prefix / "file-a.txt"
-        local_path_b = buckets_dir / user_prefix / "file-b.txt"
+        # Verify files were downloaded to tmp_path (under bucket_name subdirectory)
+        local_path_a = buckets_dir / bucket_name / user_prefix / "file-a.txt"
+        local_path_b = buckets_dir / bucket_name / user_prefix / "file-b.txt"
         assert local_path_a.exists()
         assert local_path_b.exists()
 

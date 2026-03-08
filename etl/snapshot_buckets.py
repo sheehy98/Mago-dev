@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 def get_buckets_directory() -> Path:
     """Get the path to the buckets directory"""
-    from dev.paths import BUCKETS_DIR
-    return BUCKETS_DIR
+    import dev.paths as paths
+    return paths.BUCKETS_DIR
 
 
 def save_buckets_file(buckets_dir: Path, usernames: set[str]):
