@@ -60,19 +60,22 @@ def seed_bucket(buckets: Optional[list[str]] = None) -> dict[str, Any]:
     for bucket_name in target_buckets:
         uploaded_count = 0
 
-        # Upload files from buckets directory (excluding .minio and .DS_Store)
-        for item in buckets_dir.iterdir():
-            if item.is_dir() and item.name != ".minio":
-                for file_path in item.rglob("*"):
-                    if (
-                        file_path.is_file()
-                        and file_path.name != ".DS_Store"
-                        and ".objects" not in file_path.parts
-                    ):
-                        relative_path = file_path.relative_to(buckets_dir)
-                        object_key = str(relative_path).replace("\\", "/")
-                        client.upload_file(str(file_path), bucket_name, object_key)
-                        uploaded_count += 1
+        # Upload files from the bucket's own directory
+        bucket_dir = buckets_dir / bucket_name
+        if not bucket_dir.exists():
+            continue
+
+        for file_path in bucket_dir.rglob("*"):
+            if (
+                file_path.is_file()
+                and file_path.name != ".DS_Store"
+                and file_path.name != ".objects"
+                and file_path.name != ".buckets"
+            ):
+                relative_path = file_path.relative_to(bucket_dir)
+                object_key = str(relative_path).replace("\\", "/")
+                client.upload_file(str(file_path), bucket_name, object_key)
+                uploaded_count += 1
 
         buckets_seeded.append({"bucket": bucket_name, "files_uploaded": uploaded_count})
         total_files_uploaded += uploaded_count

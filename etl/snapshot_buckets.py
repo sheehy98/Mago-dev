@@ -51,16 +51,15 @@ def save_objects_file(directory: Path, filenames: set[str]):
             f.write(f"{filename}\n")
 
 
-def get_local_files(buckets_dir: Path, username: str) -> set[str]:
-    """Get all local files for a user (excluding system files)"""
-    user_dir = buckets_dir / username
-    if not user_dir.exists():
+def get_local_files(bucket_dir: Path) -> set[str]:
+    """Get all local files for a bucket (excluding system files)"""
+    if not bucket_dir.exists():
         return set()
 
     local_files = set()
-    for file_path in user_dir.rglob("*"):
+    for file_path in bucket_dir.rglob("*"):
         if file_path.is_file() and file_path.name not in [".objects", ".buckets", ".DS_Store"]:
-            relative_path = file_path.relative_to(buckets_dir)
+            relative_path = file_path.relative_to(bucket_dir)
             local_files.add(str(relative_path))
     return local_files
 
@@ -110,6 +109,7 @@ def snapshot_bucket(buckets: Optional[list[str]] = None) -> dict[str, Any]:
 
     # Process each bucket
     for bucket_name in target_buckets:
+
         # List all objects in bucket
         minio_objects = {}
         paginator = client.get_paginator("list_objects_v2")
@@ -117,57 +117,54 @@ def snapshot_bucket(buckets: Optional[list[str]] = None) -> dict[str, Any]:
             for obj in page.get("Contents", []):
                 minio_objects[obj["Key"]] = obj.get("Size", 0)
 
-        # Group objects by username
-        users_objects: dict[str, list[str]] = {}
-        for object_key in minio_objects:
-            parts = object_key.split("/")
-            if parts:
-                username = parts[0]
-                if username not in users_objects:
-                    users_objects[username] = []
-                users_objects[username].append(object_key)
-
+        bucket_dir = buckets_dir / bucket_name
+        local_files = get_local_files(bucket_dir)
+        minio_keys = set(minio_objects.keys())
+        directory_files: dict[Path, set[str]] = {}
         bucket_downloaded = 0
         bucket_deleted = 0
 
-        # Process each user's files
-        for username, object_keys in users_objects.items():
-            local_files = get_local_files(buckets_dir, username)
-            minio_keys = set(object_keys)
-            directory_files: dict[Path, set[str]] = {}
+        # Download missing or changed files
+        for object_key in minio_keys:
+            local_path = bucket_dir / object_key
+            minio_size = minio_objects[object_key]
 
-            # Download missing or changed files
-            for object_key in minio_keys:
-                local_path = buckets_dir / object_key
-                minio_size = minio_objects[object_key]
+            # Track file in its parent directory
+            if local_path.parent not in directory_files:
+                directory_files[local_path.parent] = set()
+            directory_files[local_path.parent].add(local_path.name)
 
-                # Track file in directory
-                if local_path.parent not in directory_files:
-                    directory_files[local_path.parent] = set()
-                directory_files[local_path.parent].add(local_path.name)
+            # Track every intermediate directory up to bucket_dir
+            current = local_path.parent
+            while current != bucket_dir:
+                parent = current.parent
+                if parent not in directory_files:
+                    directory_files[parent] = set()
+                directory_files[parent].add(current.name)
+                current = parent
 
-                # Download if missing or size differs
-                should_download = not local_path.exists()
-                if local_path.exists() and local_path.stat().st_size != minio_size:
-                    should_download = True
+            # Download if missing or size differs
+            should_download = not local_path.exists()
+            if local_path.exists() and local_path.stat().st_size != minio_size:
+                should_download = True
 
-                if should_download:
-                    local_path.parent.mkdir(parents=True, exist_ok=True)
-                    client.download_file(bucket_name, object_key, str(local_path))
-                    bucket_downloaded += 1
+            if should_download:
+                local_path.parent.mkdir(parents=True, exist_ok=True)
+                client.download_file(bucket_name, object_key, str(local_path))
+                bucket_downloaded += 1
 
-            # Update .objects files
-            for directory, filenames in directory_files.items():
-                save_objects_file(directory, filenames)
+        # Update .objects files at every directory level
+        for directory, filenames in directory_files.items():
+            save_objects_file(directory, filenames)
 
-            # Delete files not in MinIO
-            for object_key in local_files - minio_keys:
-                local_path = buckets_dir / object_key
-                if local_path.exists():
-                    local_path.unlink()
-                    bucket_deleted += 1
+        # Delete files not in MinIO
+        for object_key in local_files - minio_keys:
+            local_path = bucket_dir / object_key
+            if local_path.exists():
+                local_path.unlink()
+                bucket_deleted += 1
 
-            all_usernames.add(username)
+        all_usernames.add(bucket_name)
 
         total_downloaded += bucket_downloaded
         total_deleted += bucket_deleted
