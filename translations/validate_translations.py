@@ -351,17 +351,21 @@ def validate_component_translations(
                 normalized_use_path = use_translation_path.replace("\\", "/")
                 normalized_expected = expected_path.replace("\\", "/")
 
-                # Check if paths match
+                # Check if paths match — allow shared parent translations
+                # (sub-components can use their parent's translation path)
                 if normalized_use_path != normalized_expected:
-                    issues.append(
-                        {
-                            "type": "translation_path_mismatch",
-                            "component": component_file_path,
-                            "use_translation_path": use_translation_path,
-                            "expected_path": expected_path,
-                            "message": f"useTranslation path '{use_translation_path}' does not match component location '{expected_path}'. Expected: '{expected_path}' based on file location.",
-                        }
-                    )
+                    # Accept if the referenced translation folder actually exists
+                    referenced_folder = Path(src_root) / use_translation_path / "translations"
+                    if not referenced_folder.exists():
+                        issues.append(
+                            {
+                                "type": "translation_path_mismatch",
+                                "component": component_file_path,
+                                "use_translation_path": use_translation_path,
+                                "expected_path": expected_path,
+                                "message": f"useTranslation path '{use_translation_path}' does not match component location '{expected_path}'. Expected: '{expected_path}' based on file location.",
+                            }
+                        )
 
         # Check for duplicate useTranslation calls with the same path
         path_counts = Counter(use_translation_paths)
@@ -389,7 +393,15 @@ def validate_component_translations(
                     "message": f"Translation function aliased as '{alias}'. Use 't' directly instead of creating aliases.",
                 }
             )
-        if not full_translation_path.exists():
+        # Check if the component's own translation folder exists, OR if it references
+        # a parent's translation folder that exists (shared translation pattern)
+        has_own_translations = full_translation_path.exists()
+        has_shared_translations = any(
+            (Path(src_root) / p / "translations").exists()
+            for p in use_translation_paths
+        )
+
+        if not has_own_translations and not has_shared_translations:
             issues.append(
                 {
                     "type": "component_missing_translations",
@@ -399,7 +411,11 @@ def validate_component_translations(
             )
         else:
             # Load translation file (en.json) to check keys
+            # Use own translations folder, or fall back to shared parent folder
             en_file = full_translation_path / "en.json"
+            if not en_file.exists() and use_translation_paths:
+                en_file = Path(src_root) / use_translation_paths[0] / "translations" / "en.json"
+
             if en_file.exists():
                 with open(en_file, encoding="utf-8") as f:
                     translation_data = json.load(f)
@@ -649,6 +665,14 @@ def validate_orphaned_translation_folders(
                 full_translation_path = src_path / translation_folder_path
                 normalized = str(full_translation_path.resolve()).replace("\\", "/")
                 translation_folders_in_use.add(normalized)
+
+            # Also track the actual useTranslation path (may differ for shared translations)
+            with open(component_file, encoding="utf-8") as f:
+                content = f.read()
+            for ref_path in re.findall(r"\buseTranslation\(['\"]([^'\"]+)['\"]\)", content):
+                ref_full = src_path / ref_path / "translations"
+                ref_normalized = str(ref_full.resolve()).replace("\\", "/")
+                translation_folders_in_use.add(ref_normalized)
 
     # Check each translation folder
     for folder_path in translation_folders:
@@ -917,3 +941,7 @@ if __name__ == "__main__":
     parser.parse_args()
     result = validate_translations()
     print(json.dumps(result, indent=2))
+
+    # Exit with non-zero code if validation failed
+    if not result["valid"]:
+        raise SystemExit(1)

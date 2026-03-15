@@ -232,6 +232,17 @@ def validate_data_catalog() -> dict[str, Any]:
     # Get catalog documentation
     catalog_schema = get_catalog_schema()
 
+    # Filter out catalog entries from non-validated user schemas (24-char hex IDs
+    # that aren't the test user). These are leftover snapshots from deleted users.
+    validated_schemas = {"meta", "test00000000000000000000"}
+    catalog_schema = {
+        table: cols
+        for table, cols in catalog_schema.items()
+        if table.split(".")[0] in validated_schemas
+        or len(table.split(".")[0]) != 24
+        or not all(c in "0123456789abcdef" for c in table.split(".")[0])
+    }
+
     # Track validation results
     issues = []
 
@@ -425,3 +436,7 @@ if __name__ == "__main__":
     parser.parse_args()
     result = validate_data_catalog()
     print(json.dumps(result, indent=2))
+
+    # Exit with non-zero code if validation failed
+    if not result["valid"]:
+        raise SystemExit(1)
