@@ -434,6 +434,30 @@ def validate_component_translations(
                         }
                     )
 
+                # Check for unused keys — only on the component that OWNS the
+                # translation folder (skip sub-components using shared translations)
+                if has_own_translations:
+                    all_used_keys = set(used_keys)
+
+                    # Gather t('...') keys from all .tsx files in the tree
+                    translations_parent = full_translation_path.parent
+                    for sub_file in translations_parent.rglob("*.tsx"):
+                        sub_path = str(sub_file)
+                        if sub_path == component_file_path:
+                            continue
+                        all_used_keys |= extract_translation_keys(sub_path)
+
+                    unused_keys = translation_keys - all_used_keys
+                    for key in unused_keys:
+                        issues.append(
+                            {
+                                "type": "component_unused_key",
+                                "component": component_file_path,
+                                "key": key,
+                                "message": f"Translation key '{key}' in en.json but not used by any component in the directory tree",
+                            }
+                        )
+
         # Check for hardcoded text (should use translations instead)
         for hardcoded in hardcoded_texts:
             issues.append(
@@ -889,6 +913,7 @@ def validate_translations() -> dict[str, Any]:
     component_issue_types = [
         "component_missing_translations",
         "component_missing_key",
+        "component_unused_key",
         "component_hardcoded_text",
         "component_needs_translations",
         "translation_path_mismatch",
