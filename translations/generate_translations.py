@@ -114,28 +114,36 @@ def generate_translations_for_folder(folder_path: str, force: bool = False) -> i
         if lang_file.exists() and not force:
             # Check if existing file has all keys from en.json
             with open(lang_file, encoding="utf-8") as f:
-                existing_keys = set(json.load(f).keys())
-
-            missing_keys = set(en_data.keys()) - existing_keys
-            if not missing_keys:
-                continue
-
-            # Translate only the missing keys and merge with existing
-            logger.info(f"  Adding {len(missing_keys)} missing key(s) to {lang}...")
-            missing_data = {k: en_data[k] for k in missing_keys}
-            translated_missing = translate_values(missing_data, lang)
-
-            with open(lang_file, encoding="utf-8") as f:
                 existing_data = json.load(f)
 
-            existing_data.update(translated_missing)
+            existing_keys = set(existing_data.keys())
+            en_keys = set(en_data.keys())
+            missing_keys = en_keys - existing_keys
+            extra_keys = existing_keys - en_keys
+
+            # Nothing to do if keys are already in sync
+            if not missing_keys and not extra_keys:
+                continue
+
+            # Translate missing keys and merge with existing
+            if missing_keys:
+                logger.info(f"  Adding {len(missing_keys)} missing key(s) to {lang}...")
+                missing_data = {k: en_data[k] for k in missing_keys}
+                translated_missing = translate_values(missing_data, lang)
+                existing_data.update(translated_missing)
+                time.sleep(0.2)
+
+            # Remove extra keys not present in en.json
+            if extra_keys:
+                logger.info(f"  Removing {len(extra_keys)} extra key(s) from {lang}...")
+                for key in extra_keys:
+                    del existing_data[key]
 
             with open(lang_file, "w", encoding="utf-8") as f:
                 json.dump(existing_data, f, ensure_ascii=False, indent=2, sort_keys=True)
                 f.write("\n")
 
             files_generated += 1
-            time.sleep(0.2)
             continue
 
         # File doesn't exist or force=True — translate everything
@@ -159,7 +167,7 @@ def find_incomplete_folders(src_root: str) -> list[str]:
     Find all translations/ folders under src_root that are missing language files or keys
 
     Checks both file existence and key completeness — a folder is incomplete
-    if any target language file is missing or has fewer keys than en.json.
+    if any target language file is missing, has missing keys, or has extra keys not in en.json.
 
     @param src_root (str): Root path to scan (e.g., frontend/src)
     @returns list[str] - List of folder paths that need translation generation
@@ -193,7 +201,7 @@ def find_incomplete_folders(src_root: str) -> list[str]:
             with open(lang_file, encoding="utf-8") as f:
                 lang_keys = set(json.load(f).keys())
 
-            if not en_keys.issubset(lang_keys):
+            if en_keys != lang_keys:
                 incomplete.append(str(translations_dir))
                 break
 
