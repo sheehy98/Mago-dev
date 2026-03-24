@@ -6,6 +6,7 @@
 import argparse
 import json
 import logging
+import mimetypes
 import os
 from typing import Any, Optional
 
@@ -74,7 +75,10 @@ def seed_bucket(buckets: Optional[list[str]] = None) -> dict[str, Any]:
             ):
                 relative_path = file_path.relative_to(bucket_dir)
                 object_key = str(relative_path).replace("\\", "/")
-                client.upload_file(str(file_path), bucket_name, object_key)
+                # Detect content type from file extension
+                content_type, _ = mimetypes.guess_type(str(file_path))
+                extra_args = {"ContentType": content_type} if content_type else {}
+                client.upload_file(str(file_path), bucket_name, object_key, ExtraArgs=extra_args)
                 uploaded_count += 1
 
         buckets_seeded.append({"bucket": bucket_name, "files_uploaded": uploaded_count})
