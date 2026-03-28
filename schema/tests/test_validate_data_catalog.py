@@ -198,7 +198,7 @@ def test_validate_detects_fk_missing_in_catalog(fake_catalog_fk_missing):
         i
         for i in data["issues"]
         if i["type"] == "foreign_key_missing_in_catalog"
-        and i.get("table") == "meta.tickers"
+        and i.get("table") == "meta.widgets"
         and i.get("column") == "Avatar ID"
     ]
 
@@ -222,7 +222,7 @@ def test_validate_detects_fk_mismatch(fake_catalog_fk_mismatch):
         i
         for i in data["issues"]
         if i["type"] == "foreign_key_mismatch"
-        and i.get("table") == "meta.tickers"
+        and i.get("table") == "meta.widgets"
         and i.get("column") == "Avatar ID"
     ]
 

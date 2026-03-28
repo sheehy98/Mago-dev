@@ -227,22 +227,22 @@ def fake_catalog_fk_missing(tmp_path):
     tables_dir = redirect_tables(tmp_path)
 
     # Remove real catalog from copy
-    real_catalog = tables_dir / "meta" / "tickers" / "catalog.csv"
+    real_catalog = tables_dir / "meta" / "widgets" / "catalog.csv"
     real_catalog.unlink()
 
     # Add fake catalog without FK on Avatar ID
     temp_dir = tables_dir / "_test_fk_missing"
     temp_dir.mkdir(exist_ok=True)
 
-    # Document meta.tickers but omit the FK on Avatar ID (DB has FK to lucide_icon.ID)
+    # Document meta.widgets but omit the FK on Avatar ID (DB has FK to lucide_icon.ID)
     catalog_file = temp_dir / "catalog.csv"
     catalog_file.write_text(
         "Table,Column,Order,Type,Nullable?,Primary Key?,Foreign Key,Description,Sample Values\n"
-        "meta.tickers,NULL,0,TABLE,,,,Tickers table,\n"
-        "meta.tickers,ID,1,INTEGER,FALSE,TRUE,,ID,1\n"
-        "meta.tickers,Name,2,TEXT,FALSE,FALSE,,Name,Time\n"
-        "meta.tickers,Description,3,TEXT,FALSE,FALSE,,Desc,Ticker\n"
-        "meta.tickers,Avatar ID,4,INTEGER,FALSE,FALSE,,Missing FK,1\n"
+        "meta.widgets,NULL,0,TABLE,,,,Tickers table,\n"
+        "meta.widgets,ID,1,INTEGER,FALSE,TRUE,,ID,1\n"
+        "meta.widgets,Name,2,TEXT,FALSE,FALSE,,Name,Time\n"
+        "meta.widgets,Description,3,TEXT,FALSE,FALSE,,Desc,Ticker\n"
+        "meta.widgets,Avatar ID,4,INTEGER,FALSE,FALSE,,Missing FK,1\n"
     )
 
     yield temp_dir
@@ -259,7 +259,7 @@ def fake_catalog_fk_mismatch(tmp_path):
     tables_dir = redirect_tables(tmp_path)
 
     # Remove real catalog from copy
-    real_catalog = tables_dir / "meta" / "tickers" / "catalog.csv"
+    real_catalog = tables_dir / "meta" / "widgets" / "catalog.csv"
     real_catalog.unlink()
 
     # Add fake catalog with wrong FK
@@ -270,11 +270,11 @@ def fake_catalog_fk_mismatch(tmp_path):
     catalog_file = temp_dir / "catalog.csv"
     catalog_file.write_text(
         "Table,Column,Order,Type,Nullable?,Primary Key?,Foreign Key,Description,Sample Values\n"
-        "meta.tickers,NULL,0,TABLE,,,,Tickers table,\n"
-        "meta.tickers,ID,1,INTEGER,FALSE,TRUE,,ID,1\n"
-        "meta.tickers,Name,2,TEXT,FALSE,FALSE,,Name,Time\n"
-        "meta.tickers,Description,3,TEXT,FALSE,FALSE,,Desc,Ticker\n"
-        "meta.tickers,Avatar ID,4,INTEGER,FALSE,FALSE,meta.languages.ID,Wrong FK,1\n"
+        "meta.widgets,NULL,0,TABLE,,,,Tickers table,\n"
+        "meta.widgets,ID,1,INTEGER,FALSE,TRUE,,ID,1\n"
+        "meta.widgets,Name,2,TEXT,FALSE,FALSE,,Name,Time\n"
+        "meta.widgets,Description,3,TEXT,FALSE,FALSE,,Desc,Ticker\n"
+        "meta.widgets,Avatar ID,4,INTEGER,FALSE,FALSE,meta.languages.ID,Wrong FK,1\n"
     )
 
     yield temp_dir
