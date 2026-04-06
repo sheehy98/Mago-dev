@@ -18,10 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 #
-# Environment Loading
-#
-
-#
 # Helper Functions
 #
 
@@ -57,9 +53,6 @@ def load_env():
         os.environ["MINIO_HOST"] = "localhost"
         os.environ["MINIO_EXTERNAL_HOST"] = "localhost"
         os.environ["MINIO_INTERNAL_PORT"] = os.environ.get("MINIO_PORT", "9000")
-
-    # Debug output for troubleshooting
-    print(f"[dev.env] MAGO_ENV={env}, MINIO_HOST={os.getenv('MINIO_HOST')}, MINIO_PORT={os.getenv('MINIO_PORT')}")
 
     logger.info("Loaded %s environment", env)
     return env
