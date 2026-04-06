@@ -48,9 +48,23 @@ def _load_ports(suffix=""):
     }
 
 
-DEV_PORTS = _load_ports()
-PROD_PORTS = _load_ports(".production")
+# Load remote domain for health checks
+def _load_remote_domain():
+    """Load the remote domain from root .env for remote health checks."""
+    env = dotenv_values(ROOT_DIR / ".env")
+    return env.get("REMOTE_DOMAIN", "")
 
+
+DEV_PORTS = _load_ports()
+DOCKER_PORTS = _load_ports(".staging")
+REMOTE_DOMAIN = _load_remote_domain()
+
+# Remote health check URLs
+REMOTE_URLS = {
+    "frontend": f"https://{REMOTE_DOMAIN}",
+    "api": f"https://api.{REMOTE_DOMAIN}/health",
+    "minio": f"https://files.{REMOTE_DOMAIN}/minio/health/live",
+}
 
 # Dashboard port
 DASHBOARD_PORT = 3470
@@ -58,48 +72,48 @@ DASHBOARD_PORT = 3470
 # Venv python path
 VENV_PYTHON = str(ROOT_DIR / ".venv" / "bin" / "python")
 
-# Current environment mode ("dev" or "production")
+# Current environment mode
 current_mode = "dev"
 
 # Command definitions
 # Each command is a shell string run via bash -c, with cwd set to ROOT_DIR
-# Commands tagged with supports_prod=True get -p appended in production mode
+# "docker_cmd" is used for staging and remote modes (Docker mode)
 COMMANDS = {
 
-    # Service management — scripts support -p natively
+    # Service management — scripts support -s natively
     "services/launch": {
         "cmd": "bash data/scripts/launch.sh && bash api/scripts/launch.sh && bash frontend/scripts/launch.sh",
-        "prod_cmd": "bash data/scripts/launch.sh -p && bash api/scripts/launch.sh -p && bash frontend/scripts/launch.sh -p",
+        "docker_cmd": "bash data/scripts/launch.sh -s && bash api/scripts/launch.sh -s && bash frontend/scripts/launch.sh -s",
     },
     "services/kill": {
         "cmd": "bash frontend/scripts/kill.sh; bash api/scripts/kill.sh; bash data/scripts/kill.sh",
-        "prod_cmd": "bash frontend/scripts/kill.sh -p; bash api/scripts/kill.sh -p; bash data/scripts/kill.sh -p",
+        "docker_cmd": "bash frontend/scripts/kill.sh -s; bash api/scripts/kill.sh -s; bash data/scripts/kill.sh -s",
     },
 
-    # ETL — dev.env handles .env loading, -p flag selects production
+    # ETL — dev.env handles .env loading, -s flag selects staging DB
     "etl/reset-tables": {
         "cmd": "source .venv/bin/activate && python -m dev.etl.reset_tables",
-        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.reset_tables -p",
+        "docker_cmd": "source .venv/bin/activate && python -m dev.etl.reset_tables -s",
     },
     "etl/reset-buckets": {
         "cmd": "source .venv/bin/activate && python -m dev.etl.reset_bucket",
-        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.reset_bucket -p",
+        "docker_cmd": "source .venv/bin/activate && python -m dev.etl.reset_bucket -s",
     },
     "etl/reset-all": {
         "cmd": "source .venv/bin/activate && python -m dev.etl.reset_all",
-        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.reset_all -p",
+        "docker_cmd": "source .venv/bin/activate && python -m dev.etl.reset_all -s",
     },
     "etl/snapshot-tables": {
         "cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_tables",
-        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_tables -p",
+        "docker_cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_tables -s",
     },
     "etl/snapshot-buckets": {
         "cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_buckets",
-        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_buckets -p",
+        "docker_cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_buckets -s",
     },
     "etl/snapshot-all": {
         "cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_all",
-        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_all -p",
+        "docker_cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_all -s",
     },
 
     # Linting — not environment-specific
@@ -121,6 +135,22 @@ COMMANDS = {
     "tests/api-no-coverage": {"cmd": "bash scripts/run_tests.sh --no-coverage"},
     "tests/browser": {"cmd": "bash scripts/run_tests.sh -m browser --no-coverage"},
     "tests/browser-headed": {"cmd": "bash scripts/run_tests.sh -m browser --no-coverage --headed"},
+
+    # Remote deployment — only available in remote mode
+    "remote/sync": {"cmd": "bash scripts/deploy-remote.sh --sync"},
+    "remote/deploy": {"cmd": "bash scripts/deploy-remote.sh --deploy"},
+    "remote/kill": {"cmd": "bash scripts/deploy-remote.sh --kill"},
+    "remote/tunnel": {"cmd": "bash scripts/deploy-remote.sh --tunnel"},
+    "remote/status": {"cmd": "bash scripts/deploy-remote.sh --status"},
+    "remote/logs": {"cmd": "bash scripts/deploy-remote.sh --logs"},
+
+    # Remote ETL — runs on remote machine via SSH
+    "remote/etl/reset-tables": {"cmd": "bash scripts/deploy-remote.sh --etl reset_tables"},
+    "remote/etl/reset-buckets": {"cmd": "bash scripts/deploy-remote.sh --etl reset_bucket"},
+    "remote/etl/reset-all": {"cmd": "bash scripts/deploy-remote.sh --etl reset_all"},
+    "remote/etl/snapshot-tables": {"cmd": "bash scripts/deploy-remote.sh --etl snapshot_tables"},
+    "remote/etl/snapshot-buckets": {"cmd": "bash scripts/deploy-remote.sh --etl snapshot_buckets"},
+    "remote/etl/snapshot-all": {"cmd": "bash scripts/deploy-remote.sh --etl snapshot_all"},
 }
 
 
@@ -159,6 +189,21 @@ def check_port(port: int) -> bool:
     return result.returncode == 0
 
 
+def check_url(url: str) -> bool:
+    """
+    Check if a URL is reachable using curl.
+
+    @param url (str): URL to check
+    @returns bool - True if URL responds successfully
+    """
+    result = subprocess.run(
+        ["curl", "-sf", "--max-time", "5", url],
+        capture_output=True,
+        timeout=10,
+    )
+    return result.returncode == 0
+
+
 async def run_task(command: str, task_id: str):
     """
     Run a shell command as a subprocess and capture output line by line.
@@ -176,9 +221,16 @@ async def run_task(command: str, task_id: str):
             "LANG": os.environ.get("LANG", "en_US.UTF-8"),
         }
 
-        # Pass mode to subprocess so dev.env picks it up
-        if current_mode == "production":
-            clean_env["MAGO_ENV"] = "production"
+        # Pass mode to subprocess so dev.env picks up staging DB config
+        if current_mode in ("staging", "remote"):
+            clean_env["MAGO_ENV"] = "staging"
+
+        # Tell launch scripts which env files to use
+        if current_mode == "staging":
+            clean_env["FRONTEND_ENV_FILE"] = "frontend/.env.staging"
+        elif current_mode == "remote":
+            clean_env["FRONTEND_ENV_FILE"] = "frontend/.env.remote"
+            clean_env["API_ENV_FILE"] = ".env.remote"
 
         process = await asyncio.create_subprocess_exec(
             "bash", "-c", command,
@@ -218,9 +270,13 @@ def get_command(command_key: str) -> str | None:
     if entry is None:
         return None
 
-    # Use production command if in production mode and one exists
-    if current_mode == "production" and "prod_cmd" in entry:
-        return entry["prod_cmd"]
+    # Remote commands only available in remote mode
+    if command_key.startswith("remote/") and current_mode != "remote":
+        return None
+
+    # Use Docker command for staging and remote modes
+    if current_mode in ("staging", "remote") and "docker_cmd" in entry:
+        return entry["docker_cmd"]
 
     return entry["cmd"]
 
@@ -283,10 +339,10 @@ async def get_mode():
 
 @app.post("/mode/{mode}")
 async def set_mode(mode: str):
-    """Switch between dev and production mode."""
+    """Switch between dev, staging, and remote modes."""
     global current_mode
-    if mode not in ("dev", "production"):
-        return JSONResponse({"error": "Mode must be 'dev' or 'production'"}, status_code=400)
+    if mode not in ("dev", "staging", "remote"):
+        return JSONResponse({"error": "Mode must be 'dev', 'staging', or 'remote'"}, status_code=400)
     current_mode = mode
     logger.info("Switched to %s mode", mode)
     return {"mode": current_mode}
@@ -294,12 +350,32 @@ async def set_mode(mode: str):
 
 @app.get("/status")
 async def get_status():
-    """Check which services are running by probing their ports."""
-    ports = PROD_PORTS if current_mode == "production" else DEV_PORTS
-    return {
+    """
+    Check which services are running.
+
+    Dev/Staging: lsof port checks (fast, local).
+    Remote: curl against public URLs (slower, over internet).
+    Response includes poll_interval so the frontend can adapt.
+    """
+
+    if current_mode == "remote":
+        # Check remote services via public URLs
+        status = {}
+        for name, url in REMOTE_URLS.items():
+            status[name] = {"port": 0, "running": check_url(url), "url": url}
+
+        # PostgreSQL has no public URL — always unknown
+        status["postgresql"] = {"port": 0, "running": False, "url": ""}
+
+        return {"services": status, "poll_interval": 30000}
+
+    # Local status check via lsof
+    ports = DOCKER_PORTS if current_mode == "staging" else DEV_PORTS
+    status = {
         name: {"port": port, "running": check_port(port)}
         for name, port in ports.items()
     }
+    return {"services": status, "poll_interval": 500}
 
 
 @app.get("/tasks")

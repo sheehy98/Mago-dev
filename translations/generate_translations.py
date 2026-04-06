@@ -304,7 +304,7 @@ def generate_translations(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate translation files")
-    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
+    parser.add_argument("-s", "--staging", action="store_true", help="Use staging environment")
     parser.add_argument("--folder", help="Path to a specific translations folder")
     parser.add_argument("--force", action="store_true", help="Regenerate even if file exists")
     parser.add_argument(

@@ -102,7 +102,7 @@ def create_table(usernames: Optional[list[str]] = None) -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create database tables")
-    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
+    parser.add_argument("-s", "--staging", action="store_true", help="Use staging environment")
     parser.add_argument("--usernames", nargs="*", help="Filter by usernames/schemas")
     args = parser.parse_args()
     result = create_table(usernames=args.usernames)

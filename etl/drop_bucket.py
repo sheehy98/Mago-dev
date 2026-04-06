@@ -73,7 +73,7 @@ def drop_bucket(buckets: Optional[list[str]] = None) -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Drop MinIO buckets")
-    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
+    parser.add_argument("-s", "--staging", action="store_true", help="Use staging environment")
     parser.add_argument("--buckets", nargs="*", help="Specific buckets to drop")
     args = parser.parse_args()
     result = drop_bucket(buckets=args.buckets)

@@ -47,7 +47,7 @@ def reset_table() -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reset tables")
-    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
+    parser.add_argument("-s", "--staging", action="store_true", help="Use staging environment")
     parser.parse_args()
     result = reset_table()
     print(json.dumps(result, indent=2))

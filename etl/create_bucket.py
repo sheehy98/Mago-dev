@@ -74,7 +74,7 @@ def create_bucket() -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create MinIO buckets")
-    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
+    parser.add_argument("-s", "--staging", action="store_true", help="Use staging environment")
     parser.parse_args()
     result = create_bucket()
     print(json.dumps(result, indent=2))

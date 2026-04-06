@@ -24,35 +24,41 @@ logger = logging.getLogger(__name__)
 
 def load_env():
     """
-    Load environment variables based on MAGO_ENV or -p flag.
+    Load environment variables based on MAGO_ENV or -s flag.
 
-    Checks sys.argv for -p/--production, then MAGO_ENV env var.
-    Loads .env or .env.production files from project root and data/.
+    Checks sys.argv for -s/--staging, then MAGO_ENV env var.
+    Loads .env or .env.staging files from project root and data/.
 
-    @returns str - The environment that was loaded ("dev" or "production")
+    @returns str - The environment that was loaded ("dev" or "staging")
     """
 
-    # Check for -p/--production flag in sys.argv (before argparse runs)
-    if "-p" in sys.argv or "--production" in sys.argv:
-        os.environ["MAGO_ENV"] = "production"
+    # Check for -s/--staging flag in sys.argv (before argparse runs)
+    if "-s" in sys.argv or "--staging" in sys.argv:
+        os.environ["MAGO_ENV"] = "staging"
 
     # Determine environment
     env = os.getenv("MAGO_ENV", "dev")
-    suffix = ".production" if env == "production" else ""
+    suffix = ".staging" if env == "staging" else ""
 
     # Load environment files
-    # override=True only in production mode, so test runner env vars are preserved in dev
-    load_dotenv(PROJECT_ROOT / f".env{suffix}", override=(env == "production"))
-    load_dotenv(PROJECT_ROOT / "data" / f".env{suffix}", override=(env == "production"))
+    # override=True only in staging mode, so test runner env vars are preserved in dev
+    load_dotenv(PROJECT_ROOT / f".env{suffix}", override=(env == "staging"))
+    load_dotenv(PROJECT_ROOT / "data" / f".env{suffix}", override=(env == "staging"))
 
-    # Production env uses Docker-internal hostnames (e.g. "postgres", "minio")
+    # Staging env uses Docker-internal hostnames (e.g. "postgres", "minio")
     # ETL runs on the host, so override hostnames to localhost
     # and use the host-mapped ports from docker-compose
-    if env == "production":
+    if env == "staging":
         os.environ["POSTGRES_HOST"] = "localhost"
         os.environ["MINIO_HOST"] = "localhost"
         os.environ["MINIO_EXTERNAL_HOST"] = "localhost"
         os.environ["MINIO_INTERNAL_PORT"] = os.environ.get("MINIO_PORT", "9000")
+
+    # Print environment info so output always shows which DB is targeted
+    db_host = os.getenv("POSTGRES_HOST", "unknown")
+    db_port = os.getenv("POSTGRES_PORT", "unknown")
+    db_name = os.getenv("POSTGRES_DB", "unknown")
+    print(f"[env] {env} mode — {db_name}@{db_host}:{db_port}")
 
     logger.info("Loaded %s environment", env)
     return env

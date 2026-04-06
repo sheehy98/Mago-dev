@@ -191,7 +191,7 @@ def snapshot_bucket(buckets: Optional[list[str]] = None) -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Snapshot MinIO buckets")
-    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
+    parser.add_argument("-s", "--staging", action="store_true", help="Use staging environment")
     parser.add_argument("--buckets", nargs="*", help="Specific buckets to snapshot")
     args = parser.parse_args()
     result = snapshot_bucket(buckets=args.buckets)
