@@ -67,6 +67,7 @@ def drop_table(schemas: Optional[list[str]] = None) -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Drop database schemas")
+    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
     parser.add_argument("--schemas", nargs="*", help="Schemas to drop")
     args = parser.parse_args()
     result = drop_table(schemas=args.schemas)

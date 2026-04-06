@@ -97,6 +97,7 @@ def seed_bucket(buckets: Optional[list[str]] = None) -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Seed MinIO buckets")
+    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
     parser.add_argument("--buckets", nargs="*", help="Specific buckets to seed")
     args = parser.parse_args()
     result = seed_bucket(buckets=args.buckets)

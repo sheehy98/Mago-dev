@@ -1,6 +1,6 @@
 # Mago Dev Tools
 
-Standalone development tools for ETL operations, schema validation, translation management, and LLM model management.
+Standalone development tools for ETL operations, schema validation, translation management, LLM model management, and a dev dashboard.
 
 ## Modules
 
@@ -10,6 +10,7 @@ Standalone development tools for ETL operations, schema validation, translation 
 | `schema/` | Validate data catalog CSVs against live database schema |
 | `translations/` | Generate and validate frontend translation files |
 | `ollama/` | Pull Ollama LLM models |
+| `dashboard/` | Browser-based dev dashboard (port 3470) for service management, ETL, linting, testing, and validation |
 
 ## Standalone Wrappers
 

@@ -963,6 +963,7 @@ def validate_translations() -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Validate translation files")
+    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
     parser.parse_args()
     result = validate_translations()
     print(json.dumps(result, indent=2))

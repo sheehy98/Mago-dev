@@ -433,6 +433,7 @@ def validate_data_catalog() -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Validate data catalog")
+    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
     parser.parse_args()
     result = validate_data_catalog()
     print(json.dumps(result, indent=2))

@@ -46,6 +46,7 @@ def reset_bucket() -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reset buckets")
+    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
     parser.parse_args()
     result = reset_bucket()
     print(json.dumps(result, indent=2))

@@ -33,12 +33,50 @@
       margin: 0 auto;
     }
 
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
     h1 {
       font-size: 20px;
       font-weight: 600;
-      margin-bottom: 20px;
       color: var(--text-dim);
     }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .mode-toggle span { color: var(--text-dim); }
+    .mode-toggle span.active-mode { color: var(--text); font-weight: 600; }
+    .mode-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      background: var(--green);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .mode-switch.production { background: var(--orange); }
+    .mode-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .mode-switch.production::after { transform: translateX(18px); }
 
     /* Section */
     .section {
@@ -55,6 +93,22 @@
       letter-spacing: 1px;
       color: var(--text-dim);
       margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mode-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: var(--green);
+      color: var(--bg);
+    }
+    .mode-badge.production {
+      background: var(--orange);
     }
 
     /* Status cards */
@@ -232,11 +286,18 @@
 </head>
 <body>
 
-  <h1>Mago Dev Dashboard</h1>
+  <div class="header">
+    <h1>Mago Dev Dashboard</h1>
+    <div class="mode-toggle">
+      <span id="mode-dev" class="active-mode">Dev</span>
+      <div class="mode-switch" id="mode-switch" onclick="toggleMode()"></div>
+      <span id="mode-prod">Production</span>
+    </div>
+  </div>
 
   <!-- Service Status -->
   <div class="section">
-    <div class="section-title">Services</div>
+    <div class="section-title">Services <span class="mode-badge" id="badge-services">Dev</span></div>
     <div class="status-row">
       <div class="status-card">
         <div class="status-dot" id="dot-postgresql"></div>
@@ -270,7 +331,7 @@
 
     <!-- ETL -->
     <div class="section">
-      <div class="section-title">ETL</div>
+      <div class="section-title">ETL <span class="mode-badge" id="badge-etl">Dev</span></div>
       <div class="btn-grid">
         <button onclick="runCommand('etl/reset-tables')">Reset Tables</button>
         <button onclick="runCommand('etl/reset-buckets')">Reset Buckets</button>
@@ -328,6 +389,7 @@
     <div class="console-header">
       <div class="section-title">Output</div>
       <div class="tab-bar" id="tab-bar"></div>
+      <button class="clear-btn" onclick="copyActiveTab()">Copy</button>
       <button class="clear-btn" onclick="closeAllTabs()">Clear All</button>
     </div>
     <div id="console-container">
@@ -343,6 +405,49 @@
     // Each task: { id, key, status, el, tab, es }
     const openTasks = [];
     let activeTaskId = null;
+    let currentMode = 'dev';
+
+    //
+    // Mode Toggle
+    //
+
+    async function toggleMode() {
+      const newMode = currentMode === 'dev' ? 'production' : 'dev';
+      try {
+        const res = await fetch('/mode/' + newMode, { method: 'POST' });
+        const data = await res.json();
+        currentMode = data.mode;
+        updateModeUI();
+      } catch (e) {
+        console.error('Mode switch failed:', e);
+      }
+    }
+
+    function updateModeUI() {
+      const isProd = currentMode === 'production';
+      const sw = document.getElementById('mode-switch');
+      const devLabel = document.getElementById('mode-dev');
+      const prodLabel = document.getElementById('mode-prod');
+
+      // Toggle switch
+      sw.className = 'mode-switch' + (isProd ? ' production' : '');
+      devLabel.className = isProd ? '' : 'active-mode';
+      prodLabel.className = isProd ? 'active-mode' : '';
+
+      // Update badges on mode-aware sections
+      const badgeIds = ['badge-services', 'badge-etl'];
+      for (const id of badgeIds) {
+        const badge = document.getElementById(id);
+        badge.textContent = isProd ? 'Prod' : 'Dev';
+        badge.className = 'mode-badge' + (isProd ? ' production' : '');
+      }
+    }
+
+    // Fetch initial mode
+    fetch('/mode').then(r => r.json()).then(data => {
+      currentMode = data.mode;
+      updateModeUI();
+    }).catch(() => {});
 
     //
     // Status Polling
@@ -405,6 +510,17 @@
     }
 
     // Close all tabs
+    function copyActiveTab() {
+      const task = openTasks.find(t => t.id === activeTaskId);
+      if (!task) return;
+      const text = task.el.innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.clear-btn');
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      });
+    }
+
     function closeAllTabs() {
       while (openTasks.length > 0) {
         const task = openTasks[0];

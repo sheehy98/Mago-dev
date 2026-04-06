@@ -17,7 +17,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 # Environment variables
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -33,18 +33,24 @@ DASHBOARD_DIR = Path(__file__).parent
 DEV_DIR = DASHBOARD_DIR.parent
 ROOT_DIR = DEV_DIR.parent
 
-# Load environment variables from all .env files
-load_dotenv(ROOT_DIR / ".env")
-load_dotenv(ROOT_DIR / "data" / ".env")
-load_dotenv(ROOT_DIR / "frontend" / ".env")
 
-# Service ports
-PORTS = {
-    "postgresql": int(os.getenv("POSTGRES_PORT", "3463")),
-    "minio": int(os.getenv("MINIO_EXTERNAL_PORT", "3462")),
-    "api": int(os.getenv("API_PORT", "3461")),
-    "frontend": int(os.getenv("VITE_PORT", "3460")),
-}
+# Load port maps from env files using dotenv
+def _load_ports(suffix=""):
+    """Load env files with given suffix and return service port map."""
+    env = dotenv_values(ROOT_DIR / f".env{suffix}")
+    env.update(dotenv_values(ROOT_DIR / "data" / f".env{suffix}"))
+    env.update(dotenv_values(ROOT_DIR / "frontend" / f".env{suffix}"))
+    return {
+        "postgresql": int(env.get("POSTGRES_INTERNAL_PORT", "5432") if not suffix else env.get("POSTGRES_PORT", "5432")),
+        "minio": int(env.get("MINIO_INTERNAL_PORT", "9000") if not suffix else env.get("MINIO_PORT", "9000")),
+        "api": int(env.get("API_PORT", "3461")),
+        "frontend": int(env.get("VITE_PORT", "3460")),
+    }
+
+
+DEV_PORTS = _load_ports()
+PROD_PORTS = _load_ports(".production")
+
 
 # Dashboard port
 DASHBOARD_PORT = 3470
@@ -52,43 +58,69 @@ DASHBOARD_PORT = 3470
 # Venv python path
 VENV_PYTHON = str(ROOT_DIR / ".venv" / "bin" / "python")
 
+# Current environment mode ("dev" or "production")
+current_mode = "dev"
+
 # Command definitions
 # Each command is a shell string run via bash -c, with cwd set to ROOT_DIR
+# Commands tagged with supports_prod=True get -p appended in production mode
 COMMANDS = {
 
-    # Service management — sub-scripts handle their own env
-    "services/launch": "bash data/scripts/launch.sh && bash api/scripts/launch.sh && bash frontend/scripts/launch.sh",
-    "services/kill": "bash frontend/scripts/kill.sh; bash api/scripts/kill.sh; bash data/scripts/kill.sh",
+    # Service management — scripts support -p natively
+    "services/launch": {
+        "cmd": "bash data/scripts/launch.sh && bash api/scripts/launch.sh && bash frontend/scripts/launch.sh",
+        "prod_cmd": "bash data/scripts/launch.sh -p && bash api/scripts/launch.sh -p && bash frontend/scripts/launch.sh -p",
+    },
+    "services/kill": {
+        "cmd": "bash frontend/scripts/kill.sh; bash api/scripts/kill.sh; bash data/scripts/kill.sh",
+        "prod_cmd": "bash frontend/scripts/kill.sh -p; bash api/scripts/kill.sh -p; bash data/scripts/kill.sh -p",
+    },
 
-    # ETL — need .env sourced and venv activated
-    "etl/reset-tables": "set -a && source .env && set +a && source .venv/bin/activate && python -m dev.etl.reset_tables",
-    "etl/reset-buckets": "set -a && source .env && set +a && source .venv/bin/activate && python -m dev.etl.reset_bucket",
-    "etl/reset-all": "set -a && source .env && set +a && source .venv/bin/activate && python -m dev.etl.reset_all",
-    "etl/snapshot-tables": "set -a && source .env && set +a && source .venv/bin/activate && python -m dev.etl.snapshot_tables",
-    "etl/snapshot-buckets": "set -a && source .env && set +a && source .venv/bin/activate && python -m dev.etl.snapshot_buckets",
-    "etl/snapshot-all": "set -a && source .env && set +a && source .venv/bin/activate && python -m dev.etl.snapshot_all",
+    # ETL — dev.env handles .env loading, -p flag selects production
+    "etl/reset-tables": {
+        "cmd": "source .venv/bin/activate && python -m dev.etl.reset_tables",
+        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.reset_tables -p",
+    },
+    "etl/reset-buckets": {
+        "cmd": "source .venv/bin/activate && python -m dev.etl.reset_bucket",
+        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.reset_bucket -p",
+    },
+    "etl/reset-all": {
+        "cmd": "source .venv/bin/activate && python -m dev.etl.reset_all",
+        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.reset_all -p",
+    },
+    "etl/snapshot-tables": {
+        "cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_tables",
+        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_tables -p",
+    },
+    "etl/snapshot-buckets": {
+        "cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_buckets",
+        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_buckets -p",
+    },
+    "etl/snapshot-all": {
+        "cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_all",
+        "prod_cmd": "source .venv/bin/activate && python -m dev.etl.snapshot_all -p",
+    },
 
-    # Linting — scripts handle their own env
-    "lint/bash": "bash scripts/lint.sh",
-    "lint/python": "bash scripts/lint-api.sh",
-    "lint/frontend": "bash frontend/scripts/lint.sh",
+    # Linting — not environment-specific
+    "lint/bash": {"cmd": "bash scripts/lint.sh"},
+    "lint/python": {"cmd": "bash scripts/lint-api.sh"},
+    "lint/frontend": {"cmd": "bash frontend/scripts/lint.sh"},
+    "lint/all": {"cmd": "bash scripts/lint.sh && bash scripts/lint-api.sh && bash frontend/scripts/lint.sh"},
 
-    # Validation — need .env sourced and venv activated
-    "validate/catalog": "set -a && source .env && set +a && source .venv/bin/activate && python -m dev.schema.validate_data_catalog",
-    "validate/translations": "set -a && source .env && set +a && source .venv/bin/activate && python -m dev.translations.validate_translations",
-    "validate/all": "set -a && source .env && set +a && source .venv/bin/activate && python -m dev.schema.validate_data_catalog && python -m dev.translations.validate_translations",
+    # Validation — always runs against dev
+    "validate/catalog": {"cmd": "source .venv/bin/activate && python -m dev.schema.validate_data_catalog"},
+    "validate/translations": {"cmd": "source .venv/bin/activate && python -m dev.translations.validate_translations"},
+    "validate/all": {"cmd": "source .venv/bin/activate && python -m dev.schema.validate_data_catalog && python -m dev.translations.validate_translations"},
 
-    # Data — need .env sourced and venv activated
-    "data/generate-translations": "set -a && source .env && set +a && source .venv/bin/activate && python -m dev.translations.generate_translations",
+    # Data — always runs against dev
+    "data/generate-translations": {"cmd": "source .venv/bin/activate && python -m dev.translations.generate_translations"},
 
-    # Lint all — run all three linters sequentially
-    "lint/all": "bash scripts/lint.sh && bash scripts/lint-api.sh && bash frontend/scripts/lint.sh",
-
-    # Tests — scripts handle their own env
-    "tests/api": "bash scripts/run_tests.sh",
-    "tests/api-no-coverage": "bash scripts/run_tests.sh --no-coverage",
-    "tests/browser": "bash scripts/run_tests.sh -m browser --no-coverage",
-    "tests/browser-headed": "bash scripts/run_tests.sh -m browser --no-coverage --headed",
+    # Tests — always use isolated containers, not environment-specific
+    "tests/api": {"cmd": "bash scripts/run_tests.sh"},
+    "tests/api-no-coverage": {"cmd": "bash scripts/run_tests.sh --no-coverage"},
+    "tests/browser": {"cmd": "bash scripts/run_tests.sh -m browser --no-coverage"},
+    "tests/browser-headed": {"cmd": "bash scripts/run_tests.sh -m browser --no-coverage --headed"},
 }
 
 
@@ -135,11 +167,25 @@ async def run_task(command: str, task_id: str):
     @param task_id (str): Task ID to store output under
     """
     try:
+        # Build a clean env — only essentials, so subprocesses
+        # don't inherit stale env vars from the parent process
+        clean_env = {
+            "PATH": os.environ.get("PATH", ""),
+            "HOME": os.environ.get("HOME", ""),
+            "TERM": os.environ.get("TERM", "xterm"),
+            "LANG": os.environ.get("LANG", "en_US.UTF-8"),
+        }
+
+        # Pass mode to subprocess so dev.env picks it up
+        if current_mode == "production":
+            clean_env["MAGO_ENV"] = "production"
+
         process = await asyncio.create_subprocess_exec(
             "bash", "-c", command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             cwd=str(ROOT_DIR),
+            env=clean_env,
         )
 
         tasks[task_id]["process"] = process
@@ -160,6 +206,25 @@ async def run_task(command: str, task_id: str):
         tasks[task_id]["exit_code"] = 1
 
 
+def get_command(command_key: str) -> str | None:
+    """
+    Get the shell command for a command key, respecting current mode.
+
+    @param command_key (str): Key into COMMANDS dict
+    @returns str | None - Shell command string, or None if not found
+    """
+
+    entry = COMMANDS.get(command_key)
+    if entry is None:
+        return None
+
+    # Use production command if in production mode and one exists
+    if current_mode == "production" and "prod_cmd" in entry:
+        return entry["prod_cmd"]
+
+    return entry["cmd"]
+
+
 def start_task(command_key: str) -> dict:
     """
     Start a new background task and return its ID.
@@ -169,12 +234,12 @@ def start_task(command_key: str) -> dict:
     """
 
     # Look up the command
-    if command_key not in COMMANDS:
+    command = get_command(command_key)
+    if command is None:
         return {"error": f"Unknown command: {command_key}"}
 
     # Generate a short task ID
     task_id = str(uuid.uuid4())[:8]
-    command = COMMANDS[command_key]
 
     # Register the task
     tasks[task_id] = {
@@ -188,7 +253,7 @@ def start_task(command_key: str) -> dict:
 
     # Launch the subprocess in the background
     asyncio.create_task(run_task(command, task_id))
-    logger.info("Started task %s: %s", task_id, command_key)
+    logger.info("Started task %s (%s): %s", task_id, current_mode, command_key)
 
     return {"task_id": task_id, "command": command_key}
 
@@ -210,12 +275,30 @@ async def serve_favicon():
     return FileResponse(ROOT_DIR / "frontend" / "public" / "favicon.png")
 
 
+@app.get("/mode")
+async def get_mode():
+    """Get the current environment mode."""
+    return {"mode": current_mode}
+
+
+@app.post("/mode/{mode}")
+async def set_mode(mode: str):
+    """Switch between dev and production mode."""
+    global current_mode
+    if mode not in ("dev", "production"):
+        return JSONResponse({"error": "Mode must be 'dev' or 'production'"}, status_code=400)
+    current_mode = mode
+    logger.info("Switched to %s mode", mode)
+    return {"mode": current_mode}
+
+
 @app.get("/status")
 async def get_status():
     """Check which services are running by probing their ports."""
+    ports = PROD_PORTS if current_mode == "production" else DEV_PORTS
     return {
         name: {"port": port, "running": check_port(port)}
-        for name, port in PORTS.items()
+        for name, port in ports.items()
     }
 
 

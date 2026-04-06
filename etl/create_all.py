@@ -44,6 +44,7 @@ def create_all() -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create all resources")
+    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
     parser.parse_args()
     result = create_all()
     print(json.dumps(result, indent=2))

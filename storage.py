@@ -10,8 +10,8 @@ import boto3
 from botocore.config import Config
 
 # Environment variables
-from dotenv import load_dotenv
-load_dotenv()
+from dev.env import load_env
+load_env()
 
 # Logging
 import logging
@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 MINIO_HOST = os.getenv("MINIO_HOST")
 MINIO_PORT = os.getenv("MINIO_PORT")
 MINIO_ENDPOINT = f"http://{MINIO_HOST}:{MINIO_PORT}" if MINIO_HOST and MINIO_PORT else None
+print(f"[storage] MINIO_HOST={MINIO_HOST}, MINIO_PORT={MINIO_PORT}, ENDPOINT={MINIO_ENDPOINT}")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ROOT_USER")
 MINIO_SECRET_KEY = os.getenv("MINIO_ROOT_PASSWORD")
 MINIO_REGION = os.getenv("MINIO_REGION")

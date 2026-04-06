@@ -339,6 +339,7 @@ def seed_table(usernames: Optional[list[str]] = None) -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Seed database tables")
+    parser.add_argument("-p", "--production", action="store_true", help="Use production environment")
     parser.add_argument("--usernames", nargs="*", help="Filter by usernames/schemas")
     args = parser.parse_args()
     result = seed_table(usernames=args.usernames)

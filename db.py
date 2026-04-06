@@ -11,8 +11,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 # Environment variables
-from dotenv import load_dotenv
-load_dotenv()
+from dev.env import load_env
+load_env()
 
 # Logging
 import logging
