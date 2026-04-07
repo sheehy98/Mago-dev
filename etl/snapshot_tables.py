@@ -415,16 +415,25 @@ def generate_create_table_statement(schema: str, table: str) -> str:
     )
     unique_columns = {row[0] for row in unique_result["rows"]}
 
-    # Query foreign keys
+    # Query foreign keys using pg_catalog for accurate column pairing
+    # (information_schema.constraint_column_usage doesn't pair source/target columns correctly)
     fk_result = execute_query(
         """
-        SELECT kcu.column_name, ccu.table_schema, ccu.table_name, ccu.column_name
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.key_column_usage kcu
-            ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
-        JOIN information_schema.constraint_column_usage ccu
-            ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.table_schema
-        WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = %s AND tc.table_name = %s;
+        SELECT
+            a_src.attname AS source_column,
+            n_ref.nspname AS ref_schema,
+            c_ref.relname AS ref_table,
+            a_ref.attname AS ref_column
+        FROM pg_constraint con
+        JOIN pg_class c_src ON con.conrelid = c_src.oid
+        JOIN pg_namespace n_src ON c_src.relnamespace = n_src.oid
+        JOIN pg_class c_ref ON con.confrelid = c_ref.oid
+        JOIN pg_namespace n_ref ON c_ref.relnamespace = n_ref.oid
+        CROSS JOIN LATERAL unnest(con.conkey, con.confkey) WITH ORDINALITY AS cols(src_attnum, ref_attnum, ord)
+        JOIN pg_attribute a_src ON a_src.attrelid = c_src.oid AND a_src.attnum = cols.src_attnum
+        JOIN pg_attribute a_ref ON a_ref.attrelid = c_ref.oid AND a_ref.attnum = cols.ref_attnum
+        WHERE con.contype = 'f' AND n_src.nspname = %s AND c_src.relname = %s
+        ORDER BY con.conname, cols.ord;
         """,
         (schema, table),
     )
