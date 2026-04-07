@@ -139,6 +139,7 @@ COMMANDS = {
     # Remote deployment — only available in remote mode
     "remote/sync": {"cmd": "bash scripts/deploy-remote.sh --sync"},
     "remote/deploy": {"cmd": "bash scripts/deploy-remote.sh --deploy"},
+    "remote/restart": {"cmd": "bash scripts/deploy-remote.sh --restart"},
     "remote/kill": {"cmd": "bash scripts/deploy-remote.sh --kill"},
     "remote/tunnel": {"cmd": "bash scripts/deploy-remote.sh --tunnel"},
     "remote/status": {"cmd": "bash scripts/deploy-remote.sh --status"},

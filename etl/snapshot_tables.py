@@ -259,7 +259,9 @@ def list_all_tables() -> set[str]:
     tables = set()
 
     for row in result["rows"]:
-        tables.add(f"{row[0]}.{row[1]}")
+        schema = row[0]
+
+        tables.add(f"{schema}.{row[1]}")
 
     return tables
 

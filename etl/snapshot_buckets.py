@@ -92,6 +92,7 @@ def snapshot_bucket(buckets: Optional[list[str]] = None) -> dict[str, Any]:
     # List all buckets, apply filter if provided (skip non-existent buckets)
     list_response = client.list_buckets()
     existing_buckets = {bucket["Name"] for bucket in list_response.get("Buckets", [])}
+
     target_buckets = (
         [b for b in buckets if b in existing_buckets]
         if buckets is not None
