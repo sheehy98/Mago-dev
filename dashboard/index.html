@@ -368,38 +368,23 @@
         </div>
       </div>
 
-      <!-- ETL (local, hidden in remote mode) -->
-      <div class="section" id="etl-section">
-        <div class="section-title">ETL <span class="mode-badge" id="badge-etl">Dev</span></div>
-        <div class="btn-grid">
-          <button onclick="runCommand('etl/reset-tables')">Reset Tables</button>
-          <button onclick="runCommand('etl/reset-buckets')">Reset Buckets</button>
-          <button onclick="runCommand('etl/reset-all')">Reset All</button>
-        </div>
-        <div class="btn-grid" style="margin-top: 8px;">
-          <button onclick="runCommand('etl/snapshot-tables')">Snapshot Tables</button>
-          <button onclick="runCommand('etl/snapshot-buckets')">Snapshot Buckets</button>
-          <button onclick="runCommand('etl/snapshot-all')">Snapshot All</button>
-        </div>
-      </div>
+      <!-- ETL + Validation -->
+      <div class="row-3" id="etl-section">
 
-      <!-- Remote ETL (visible only in remote mode) -->
-      <div class="section hidden" id="remote-etl-section">
-        <div class="section-title">ETL <span class="mode-badge remote">Remote</span></div>
-        <div class="btn-grid">
-          <button onclick="runCommand('remote/etl/reset-tables')">Reset Tables</button>
-          <button onclick="runCommand('remote/etl/reset-buckets')">Reset Buckets</button>
-          <button onclick="runCommand('remote/etl/reset-all')">Reset All</button>
+        <!-- ETL (local, hidden in remote mode) -->
+        <div class="section">
+          <div class="section-title">ETL <span class="mode-badge" id="badge-etl">Dev</span></div>
+          <div class="btn-grid">
+            <button onclick="runCommand('etl/reset-tables')">Reset Tables</button>
+            <button onclick="runCommand('etl/reset-buckets')">Reset Buckets</button>
+            <button onclick="runCommand('etl/reset-all')">Reset All</button>
+          </div>
+          <div class="btn-grid" style="margin-top: 8px;">
+            <button onclick="runCommand('etl/snapshot-tables')">Snapshot Tables</button>
+            <button onclick="runCommand('etl/snapshot-buckets')">Snapshot Buckets</button>
+            <button onclick="runCommand('etl/snapshot-all')">Snapshot All</button>
+          </div>
         </div>
-        <div class="btn-grid" style="margin-top: 8px;">
-          <button onclick="runCommand('remote/etl/snapshot-tables')">Snapshot Tables</button>
-          <button onclick="runCommand('remote/etl/snapshot-buckets')">Snapshot Buckets</button>
-          <button onclick="runCommand('remote/etl/snapshot-all')">Snapshot All</button>
-        </div>
-      </div>
-
-      <!-- Validation + Lint + Tests -->
-      <div class="row-3">
 
         <!-- Validation -->
         <div class="section">
@@ -411,6 +396,42 @@
             <button onclick="runCommand('data/generate-translations')">Generate Translations</button>
           </div>
         </div>
+
+      </div>
+
+      <!-- Remote ETL + Validation (visible only in remote mode) -->
+      <div class="row-3 hidden" id="remote-etl-section">
+
+        <!-- Remote ETL -->
+        <div class="section">
+          <div class="section-title">ETL <span class="mode-badge remote">Remote</span></div>
+          <div class="btn-grid">
+            <button onclick="runCommand('remote/etl/reset-tables')">Reset Tables</button>
+            <button onclick="runCommand('remote/etl/reset-buckets')">Reset Buckets</button>
+            <button onclick="runCommand('remote/etl/reset-all')">Reset All</button>
+          </div>
+          <div class="btn-grid" style="margin-top: 8px;">
+            <button onclick="runCommand('remote/etl/snapshot-tables')">Snapshot Tables</button>
+            <button onclick="runCommand('remote/etl/snapshot-buckets')">Snapshot Buckets</button>
+            <button onclick="runCommand('remote/etl/snapshot-all')">Snapshot All</button>
+          </div>
+        </div>
+
+        <!-- Validation -->
+        <div class="section">
+          <div class="section-title">Validation</div>
+          <div class="btn-grid">
+            <button onclick="runCommand('validate/catalog')">Validate Catalog</button>
+            <button onclick="runCommand('validate/translations')">Validate Translations</button>
+            <button onclick="runCommand('validate/all')">Validate All</button>
+            <button onclick="runCommand('data/generate-translations')">Generate Translations</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Lint + Tests -->
+      <div class="row-3">
 
         <!-- Lint -->
         <div class="section">
