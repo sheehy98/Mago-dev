@@ -30,8 +30,26 @@
       background: var(--bg);
       color: var(--text);
       padding: 24px;
-      max-width: 960px;
-      margin: 0 auto;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Two-column layout: controls left, output right */
+    .dashboard {
+      display: flex;
+      gap: 24px;
+      height: calc(100vh - 92px);
+    }
+    .controls {
+      flex: 1;
+      overflow-y: auto;
+      min-width: 0;
+    }
+    .output {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     /* Header */
@@ -80,7 +98,7 @@
       padding: 16px;
       margin-bottom: 16px;
     }
-    .section.hidden { display: none; }
+    .hidden { display: none !important; }
     .section-title {
       font-size: 13px;
       font-weight: 600;
@@ -107,12 +125,12 @@
 
     /* Status cards */
     .status-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-bottom: 12px;
     }
     .status-card {
-      flex: 1;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -142,11 +160,15 @@
       flex-wrap: wrap;
       gap: 8px;
     }
-    .columns {
+    /* Three-column row */
+    .row-3 {
       display: flex;
       gap: 16px;
     }
-    .columns > div { flex: 1; }
+    .row-3 > .section {
+      flex: 1;
+      margin-bottom: 16px;
+    }
 
     /* Buttons */
     button {
@@ -188,7 +210,7 @@
       font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
       font-size: 12px;
       line-height: 1.6;
-      height: 360px;
+      flex: 1;
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-all;
@@ -270,6 +292,20 @@
       text-align: center;
       color: var(--text-dim);
       font-size: 13px;
+      flex: 1;
+    }
+
+    /* Output section fills column */
+    .output .section {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      margin-bottom: 0;
+    }
+    .output #console-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
   </style>
 </head>
@@ -284,135 +320,153 @@
     </div>
   </div>
 
-  <!-- Service Status -->
-  <div class="section">
-    <div class="section-title">Services <span class="mode-badge" id="badge-services">Dev</span></div>
-    <div class="status-row">
-      <div class="status-card">
-        <div class="status-dot" id="dot-postgresql"></div>
-        <span>PostgreSQL</span>
-        <span class="status-port" id="port-postgresql"></span>
-      </div>
-      <div class="status-card">
-        <div class="status-dot" id="dot-minio"></div>
-        <span>MinIO</span>
-        <span class="status-port" id="port-minio"></span>
-      </div>
-      <div class="status-card">
-        <div class="status-dot" id="dot-api"></div>
-        <span>API</span>
-        <span class="status-port" id="port-api"></span>
-      </div>
-      <div class="status-card">
-        <div class="status-dot" id="dot-frontend"></div>
-        <span>Frontend</span>
-        <span class="status-port" id="port-frontend"></span>
-      </div>
-    </div>
-    <div class="btn-grid" id="local-service-btns">
-      <button onclick="runCommand('services/launch')">Launch All</button>
-      <button onclick="runCommand('services/kill')">Kill All</button>
-    </div>
-  </div>
+  <div class="dashboard">
 
-  <!-- Remote Deployment (visible only in remote mode) -->
-  <div class="section hidden" id="remote-section">
-    <div class="section-title">Remote Deployment <span class="mode-badge remote">Remote</span></div>
-    <div class="btn-grid">
-      <button onclick="runCommand('remote/deploy')">Deploy</button>
-      <button onclick="runCommand('remote/restart')">Restart</button>
-      <button onclick="runCommand('remote/sync')">Sync Code</button>
-      <button onclick="runCommand('remote/kill')">Kill Remote</button>
-      <button onclick="runCommand('remote/tunnel')">Start Tunnel</button>
-      <button onclick="runCommand('remote/status')">Docker Status</button>
-      <button onclick="runCommand('remote/logs')">View Logs</button>
-    </div>
-  </div>
+    <!-- Left column: controls -->
+    <div class="controls">
 
-  <!-- ETL + Validation -->
-  <div class="columns">
-
-    <!-- ETL (local, hidden in remote mode) -->
-    <div class="section" id="etl-section">
-      <div class="section-title">ETL <span class="mode-badge" id="badge-etl">Dev</span></div>
-      <div class="btn-grid">
-        <button onclick="runCommand('etl/reset-tables')">Reset Tables</button>
-        <button onclick="runCommand('etl/reset-buckets')">Reset Buckets</button>
-        <button onclick="runCommand('etl/reset-all')">Reset All</button>
+      <!-- Service Status -->
+      <div class="section">
+        <div class="section-title">Services <span class="mode-badge" id="badge-services">Dev</span></div>
+        <div class="status-row">
+          <div class="status-card">
+            <div class="status-dot" id="dot-postgresql"></div>
+            <span>PostgreSQL</span>
+            <span class="status-port" id="port-postgresql"></span>
+          </div>
+          <div class="status-card">
+            <div class="status-dot" id="dot-minio"></div>
+            <span>MinIO</span>
+            <span class="status-port" id="port-minio"></span>
+          </div>
+          <div class="status-card">
+            <div class="status-dot" id="dot-api"></div>
+            <span>API</span>
+            <span class="status-port" id="port-api"></span>
+          </div>
+          <div class="status-card">
+            <div class="status-dot" id="dot-frontend"></div>
+            <span>Frontend</span>
+            <span class="status-port" id="port-frontend"></span>
+          </div>
+        </div>
+        <div class="btn-grid" id="local-service-btns">
+          <button onclick="runCommand('services/launch')">Launch All</button>
+          <button onclick="runCommand('services/kill')">Kill All</button>
+        </div>
+        <div class="btn-grid hidden" id="remote-service-btns">
+          <button onclick="runCommand('remote/deploy')">Deploy</button>
+          <button onclick="runCommand('remote/restart')">Restart</button>
+          <button onclick="runCommand('remote/sync')">Sync Code</button>
+          <button onclick="runCommand('remote/kill')">Kill Remote</button>
+          <button onclick="runCommand('remote/tunnel')">Start Tunnel</button>
+          <button onclick="runCommand('remote/status')">Docker Status</button>
+          <button onclick="runCommand('remote/logs')">View Logs</button>
+        </div>
       </div>
-      <div class="btn-grid" style="margin-top: 8px;">
-        <button onclick="runCommand('etl/snapshot-tables')">Snapshot Tables</button>
-        <button onclick="runCommand('etl/snapshot-buckets')">Snapshot Buckets</button>
-        <button onclick="runCommand('etl/snapshot-all')">Snapshot All</button>
+
+      <!-- ETL (local, hidden in remote mode) -->
+      <div class="section" id="etl-section">
+        <div class="section-title">ETL <span class="mode-badge" id="badge-etl">Dev</span></div>
+        <div class="btn-grid">
+          <button onclick="runCommand('etl/reset-tables')">Reset Tables</button>
+          <button onclick="runCommand('etl/reset-buckets')">Reset Buckets</button>
+          <button onclick="runCommand('etl/reset-all')">Reset All</button>
+        </div>
+        <div class="btn-grid" style="margin-top: 8px;">
+          <button onclick="runCommand('etl/snapshot-tables')">Snapshot Tables</button>
+          <button onclick="runCommand('etl/snapshot-buckets')">Snapshot Buckets</button>
+          <button onclick="runCommand('etl/snapshot-all')">Snapshot All</button>
+        </div>
+      </div>
+
+      <!-- Remote ETL (visible only in remote mode) -->
+      <div class="section hidden" id="remote-etl-section">
+        <div class="section-title">ETL <span class="mode-badge remote">Remote</span></div>
+        <div class="btn-grid">
+          <button onclick="runCommand('remote/etl/reset-tables')">Reset Tables</button>
+          <button onclick="runCommand('remote/etl/reset-buckets')">Reset Buckets</button>
+          <button onclick="runCommand('remote/etl/reset-all')">Reset All</button>
+        </div>
+        <div class="btn-grid" style="margin-top: 8px;">
+          <button onclick="runCommand('remote/etl/snapshot-tables')">Snapshot Tables</button>
+          <button onclick="runCommand('remote/etl/snapshot-buckets')">Snapshot Buckets</button>
+          <button onclick="runCommand('remote/etl/snapshot-all')">Snapshot All</button>
+        </div>
+      </div>
+
+      <!-- Validation + Lint + Tests -->
+      <div class="row-3">
+
+        <!-- Validation -->
+        <div class="section">
+          <div class="section-title">Validation</div>
+          <div class="btn-grid">
+            <button onclick="runCommand('validate/catalog')">Validate Catalog</button>
+            <button onclick="runCommand('validate/translations')">Validate Translations</button>
+            <button onclick="runCommand('validate/all')">Validate All</button>
+            <button onclick="runCommand('data/generate-translations')">Generate Translations</button>
+          </div>
+        </div>
+
+        <!-- Lint -->
+        <div class="section">
+          <div class="section-title">Lint</div>
+          <div class="btn-grid">
+            <button onclick="runCommand('lint/bash')">Bash</button>
+            <button onclick="runCommand('lint/python')">Python</button>
+            <button onclick="runCommand('lint/frontend')">Frontend</button>
+            <button onclick="runCommand('lint/all')">Lint All</button>
+          </div>
+        </div>
+
+        <!-- Tests -->
+        <div class="section">
+          <div class="section-title">Tests</div>
+          <div class="toggle-row">
+            <button onclick="runApiTests()">API Tests</button>
+            <label><input type="checkbox" id="coverage-toggle" checked> Coverage</label>
+          </div>
+          <div class="toggle-row">
+            <button onclick="runBrowserTests()">Browser Tests</button>
+            <label><input type="checkbox" id="headed-toggle"> Headed</label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Remote Data Sync (visible only in remote mode) -->
+      <div class="section hidden" id="remote-data-section">
+        <div class="section-title">Data Sync <span class="mode-badge remote">Remote</span></div>
+        <div class="btn-grid">
+          <button onclick="runCommand('remote/data/push-tables')">Push Tables</button>
+          <button onclick="runCommand('remote/data/push-buckets')">Push Buckets</button>
+          <button onclick="runCommand('remote/data/push-all')">Push All</button>
+        </div>
+        <div class="btn-grid" style="margin-top: 8px;">
+          <button onclick="runCommand('remote/data/pull-tables')">Pull Tables</button>
+          <button onclick="runCommand('remote/data/pull-buckets')">Pull Buckets</button>
+          <button onclick="runCommand('remote/data/pull-all')">Pull All</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right column: output -->
+    <div class="output">
+      <div class="section">
+        <div class="console-header">
+          <div class="section-title">Output</div>
+          <div class="tab-bar" id="tab-bar"></div>
+          <button class="clear-btn" onclick="copyActiveTab()">Copy</button>
+          <button class="clear-btn" onclick="closeAllTabs()">Clear All</button>
+        </div>
+        <div id="console-container">
+          <div class="console-empty" id="console-empty">Run a command to see output here</div>
+        </div>
       </div>
     </div>
 
-    <!-- Remote ETL (visible only in remote mode) -->
-    <div class="section hidden" id="remote-etl-section">
-      <div class="section-title">ETL <span class="mode-badge remote">Remote</span></div>
-      <div class="btn-grid">
-        <button onclick="runCommand('remote/etl/reset-tables')">Reset Tables</button>
-        <button onclick="runCommand('remote/etl/reset-buckets')">Reset Buckets</button>
-        <button onclick="runCommand('remote/etl/reset-all')">Reset All</button>
-      </div>
-      <div class="btn-grid" style="margin-top: 8px;">
-        <button onclick="runCommand('remote/etl/snapshot-tables')">Snapshot Tables</button>
-        <button onclick="runCommand('remote/etl/snapshot-buckets')">Snapshot Buckets</button>
-        <button onclick="runCommand('remote/etl/snapshot-all')">Snapshot All</button>
-      </div>
-    </div>
-
-    <!-- Validation -->
-    <div class="section">
-      <div class="section-title">Validation</div>
-      <div class="btn-grid">
-        <button onclick="runCommand('validate/catalog')">Validate Catalog</button>
-        <button onclick="runCommand('validate/translations')">Validate Translations</button>
-        <button onclick="runCommand('validate/all')">Validate All</button>
-        <button onclick="runCommand('data/generate-translations')">Generate Translations</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Lint + Tests -->
-  <div class="columns">
-
-    <!-- Lint -->
-    <div class="section">
-      <div class="section-title">Lint</div>
-      <div class="btn-grid">
-        <button onclick="runCommand('lint/bash')">Bash</button>
-        <button onclick="runCommand('lint/python')">Python</button>
-        <button onclick="runCommand('lint/frontend')">Frontend</button>
-        <button onclick="runCommand('lint/all')">Lint All</button>
-      </div>
-    </div>
-
-    <!-- Tests -->
-    <div class="section">
-      <div class="section-title">Tests</div>
-      <div class="toggle-row">
-        <button onclick="runApiTests()">API Tests</button>
-        <label><input type="checkbox" id="coverage-toggle" checked> Coverage</label>
-      </div>
-      <div class="toggle-row">
-        <button onclick="runBrowserTests()">Browser Tests</button>
-        <label><input type="checkbox" id="headed-toggle"> Headed</label>
-      </div>
-    </div>
-  </div>
-
-  <!-- Console -->
-  <div class="section">
-    <div class="console-header">
-      <div class="section-title">Output</div>
-      <div class="tab-bar" id="tab-bar"></div>
-      <button class="clear-btn" onclick="copyActiveTab()">Copy</button>
-      <button class="clear-btn" onclick="closeAllTabs()">Clear All</button>
-    </div>
-    <div id="console-container">
-      <div class="console-empty" id="console-empty">Run a command to see output here</div>
-    </div>
   </div>
 
   <script>
@@ -464,15 +518,16 @@
         badge.className = 'mode-badge' + (currentMode !== 'dev' ? ' ' + currentMode : '');
       }
 
-      // Show/hide remote section
-      document.getElementById('remote-section').classList.toggle('hidden', currentMode !== 'remote');
-
-      // Show/hide local service buttons (not needed in remote mode)
-      document.getElementById('local-service-btns').style.display = currentMode === 'remote' ? 'none' : '';
+      // Swap local/remote service buttons
+      document.getElementById('local-service-btns').classList.toggle('hidden', currentMode === 'remote');
+      document.getElementById('remote-service-btns').classList.toggle('hidden', currentMode !== 'remote');
 
       // Swap local/remote ETL sections
       document.getElementById('etl-section').classList.toggle('hidden', currentMode === 'remote');
       document.getElementById('remote-etl-section').classList.toggle('hidden', currentMode !== 'remote');
+
+      // Show/hide remote data sync section
+      document.getElementById('remote-data-section').classList.toggle('hidden', currentMode !== 'remote');
 
       // Reset polling interval
       startPolling();

@@ -74,4 +74,4 @@ trap 'echo "Shutting down dashboard..."; bash "$KILL_SCRIPT"; exit 0' INT TERM
 # Start the dashboard server in the foreground
 echo "Starting dashboard on port $DASHBOARD_PORT..."
 cd "$parent_dir"
-python dev/dashboard/server.py 2>&1 | tee "$base_dir/logs/$LOG_FOLDER_NAME/dashboard.log"
+uvicorn dev.dashboard.server:app --host 0.0.0.0 --port $DASHBOARD_PORT --reload --reload-dir dev/dashboard 2>&1 | tee "$base_dir/logs/$LOG_FOLDER_NAME/dashboard.log"

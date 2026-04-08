@@ -152,6 +152,14 @@ COMMANDS = {
     "remote/etl/snapshot-tables": {"cmd": "bash scripts/deploy-remote.sh --etl snapshot_tables"},
     "remote/etl/snapshot-buckets": {"cmd": "bash scripts/deploy-remote.sh --etl snapshot_buckets"},
     "remote/etl/snapshot-all": {"cmd": "bash scripts/deploy-remote.sh --etl snapshot_all"},
+
+    # Remote data sync — rsync data between local and remote
+    "remote/data/push-tables": {"cmd": "bash scripts/deploy-remote.sh --push-data tables"},
+    "remote/data/push-buckets": {"cmd": "bash scripts/deploy-remote.sh --push-data buckets"},
+    "remote/data/push-all": {"cmd": "bash scripts/deploy-remote.sh --push-data all"},
+    "remote/data/pull-tables": {"cmd": "bash scripts/deploy-remote.sh --pull-data tables"},
+    "remote/data/pull-buckets": {"cmd": "bash scripts/deploy-remote.sh --pull-data buckets"},
+    "remote/data/pull-all": {"cmd": "bash scripts/deploy-remote.sh --pull-data all"},
 }
 
 
