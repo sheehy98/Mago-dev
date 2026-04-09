@@ -128,7 +128,7 @@ COMMANDS = {
     "validate/all": {"cmd": "source .venv/bin/activate && python -m dev.schema.validate_data_catalog && python -m dev.translations.validate_translations"},
 
     # Data — always runs against dev
-    "data/generate-translations": {"cmd": "source .venv/bin/activate && python -m dev.translations.generate_translations"},
+    "data/generate-translations": {"cmd": "source .venv/bin/activate && python -m dev.translations.generate_translations --all"},
 
     # Tests — always use isolated containers, not environment-specific
     "tests/api": {"cmd": "bash scripts/run_tests.sh"},
