@@ -47,10 +47,13 @@ def drop_table(schemas: Optional[list[str]] = None) -> dict[str, Any]:
     """
     logger.info("drop_table called")
 
-    # If no schemas specified, derive from data/tables directory
+    # If no schemas specified, drop all non-system schemas from the database
     if not schemas:
-        from dev.paths import TABLES_DIR
-        schemas = [d.name for d in TABLES_DIR.iterdir() if d.is_dir()]
+        result = execute_query(
+            "SELECT nspname FROM pg_namespace "
+            "WHERE nspname NOT LIKE 'pg_%%' AND nspname NOT IN ('information_schema', 'public');"
+        )
+        schemas = [row[0] for row in result["rows"]]
 
     # Drop each schema
     for schema in schemas:
