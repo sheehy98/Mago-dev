@@ -116,6 +116,43 @@ def save_translations_file(file_path: Path, data: dict[str, dict[str, str]]) -> 
         f.write("\n")
 
 
+def remove_translation_keys(file_path: str, keys: list[str]) -> dict[str, Any]:
+    """
+    Remove keys from all languages in a translations.json file
+
+    @param file_path (str): Path to the translations.json file
+    @param keys (list[str]): Keys to remove
+    @returns dict - Response with removed keys and languages affected
+    """
+
+    path = Path(file_path)
+
+    # Load the file
+    data = load_translations_file(path)
+    if data is None:
+        return {"status": "error", "message": f"Could not load {file_path}"}
+
+    # Remove keys from each language
+    removed = []
+    for key in keys:
+        for lang in data:
+            if key in data[lang]:
+                del data[lang][key]
+                removed.append(f"{lang}.{key}")
+
+    if not removed:
+        return {"status": "success", "message": "No keys found to remove", "removed": 0}
+
+    # Write updated file
+    save_translations_file(path, data)
+
+    return {
+        "status": "success",
+        "message": f"Removed {len(keys)} key(s) from {len(data)} languages",
+        "removed": len(removed),
+    }
+
+
 def generate_translations_for_folder(folder_path: str, force: bool = False) -> int:
     """
     Generate missing translations for a single component's translations.json
