@@ -78,46 +78,78 @@ def translate_values(en_data: dict[str, str], target_lang: str) -> dict[str, str
     return {key: translator.translate(value) for key, value in en_data.items()}
 
 
+def load_translations_file(file_path: Path) -> dict[str, dict[str, str]] | None:
+    """
+    Load and parse a translations.json file
+
+    @param file_path (Path): Path to translations.json
+    @returns dict | None - Nested dict keyed by language code, or None if invalid
+    """
+
+    if not file_path.exists():
+        return None
+
+    with open(file_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    if not isinstance(data, dict):
+        return None
+
+    return data
+
+
+def save_translations_file(file_path: Path, data: dict[str, dict[str, str]]) -> None:
+    """
+    Write a translations.json file with sorted keys
+
+    @param file_path (Path): Path to translations.json
+    @param data (dict): Nested dict keyed by language code
+    """
+
+    # Sort languages, and sort keys within each language
+    sorted_data = {}
+    for lang in sorted(data.keys()):
+        sorted_data[lang] = dict(sorted(data[lang].items()))
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(sorted_data, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
 def generate_translations_for_folder(folder_path: str, force: bool = False) -> int:
     """
-    Generate missing translation files for a single translations folder
+    Generate missing translations for a single component's translations.json
 
-    Reads en.json, translates to all missing languages, writes JSON files.
-    Skips languages that already have a file unless force=True.
+    Reads the English translations, translates to all missing languages, and updates the file.
+    Skips languages that already exist and are complete unless force=True.
 
-    @param folder_path (str): Path to the translations/ folder
-    @param force (bool): If True, regenerate even if file exists
-    @returns int - Number of files generated
+    @param folder_path (str): Path to the component directory containing translations.json
+    @param force (bool): If True, regenerate even if language exists
+    @returns int - Number of languages updated
     """
 
-    folder = Path(folder_path)
-    en_file = folder / "en.json"
+    file_path = Path(folder_path) / "translations.json"
 
-    # Check en.json exists
-    if not en_file.exists():
-        logger.warning(f"No en.json found in {folder_path}, skipping")
+    # Load existing translations
+    data = load_translations_file(file_path)
+    if data is None:
+        logger.warning(f"No translations.json found in {folder_path}, skipping")
         return 0
 
-    # Load English translations
-    with open(en_file, encoding="utf-8") as f:
-        en_data = json.load(f)
-
+    # Get English translations
+    en_data = data.get("en")
     if not en_data:
-        logger.warning(f"Empty en.json in {folder_path}, skipping")
+        logger.warning(f"No 'en' key in {folder_path}/translations.json, skipping")
         return 0
 
-    files_generated = 0
+    en_keys = set(en_data.keys())
+    languages_updated = 0
 
     for lang in TARGET_LANGUAGES:
-        lang_file = folder / f"{lang}.json"
+        existing = data.get(lang)
 
-        if lang_file.exists() and not force:
-            # Check if existing file has all keys from en.json
-            with open(lang_file, encoding="utf-8") as f:
-                existing_data = json.load(f)
-
-            existing_keys = set(existing_data.keys())
-            en_keys = set(en_data.keys())
+        if existing and not force:
+            existing_keys = set(existing.keys())
             missing_keys = en_keys - existing_keys
             extra_keys = existing_keys - en_keys
 
@@ -130,79 +162,75 @@ def generate_translations_for_folder(folder_path: str, force: bool = False) -> i
                 logger.info(f"  Adding {len(missing_keys)} missing key(s) to {lang}...")
                 missing_data = {k: en_data[k] for k in missing_keys}
                 translated_missing = translate_values(missing_data, lang)
-                existing_data.update(translated_missing)
+                existing.update(translated_missing)
                 time.sleep(0.2)
 
-            # Remove extra keys not present in en.json
+            # Remove extra keys not present in English
             if extra_keys:
                 logger.info(f"  Removing {len(extra_keys)} extra key(s) from {lang}...")
                 for key in extra_keys:
-                    del existing_data[key]
+                    del existing[key]
 
-            with open(lang_file, "w", encoding="utf-8") as f:
-                json.dump(existing_data, f, ensure_ascii=False, indent=2, sort_keys=True)
-                f.write("\n")
-
-            files_generated += 1
+            data[lang] = existing
+            languages_updated += 1
             continue
 
-        # File doesn't exist or force=True — translate everything
+        # Language doesn't exist or force=True — translate everything
         logger.info(f"  Translating to {lang}...")
-        translated = translate_values(en_data, lang)
-
-        with open(lang_file, "w", encoding="utf-8") as f:
-            json.dump(translated, f, ensure_ascii=False, indent=2, sort_keys=True)
-            f.write("\n")
-
-        files_generated += 1
+        data[lang] = translate_values(en_data, lang)
+        languages_updated += 1
 
         # Small delay to avoid rate limiting
         time.sleep(0.2)
 
-    return files_generated
+    # Write updated file
+    if languages_updated > 0:
+        save_translations_file(file_path, data)
+
+    return languages_updated
 
 
 def find_incomplete_folders(src_root: str) -> list[str]:
     """
-    Find all translations/ folders under src_root that are missing language files or keys
+    Find all component directories with incomplete translations.json files
 
-    Checks both file existence and key completeness — a folder is incomplete
-    if any target language file is missing, has missing keys, or has extra keys not in en.json.
+    A file is incomplete if any target language is missing or has mismatched keys.
 
     @param src_root (str): Root path to scan (e.g., frontend/src)
-    @returns list[str] - List of folder paths that need translation generation
+    @returns list[str] - List of component directory paths that need translation generation
     """
 
     incomplete = []
     root = Path(src_root)
 
-    for translations_dir in root.rglob("translations"):
-        if not translations_dir.is_dir():
+    for translations_file in root.rglob("translations.json"):
+        if not translations_file.is_file():
             continue
 
-        en_file = translations_dir / "en.json"
-        if not en_file.exists():
+        # Load the file
+        data = load_translations_file(translations_file)
+        if data is None:
             continue
 
-        # Load English keys for completeness check
-        with open(en_file, encoding="utf-8") as f:
-            en_keys = set(json.load(f).keys())
+        # Get English keys
+        en_data = data.get("en")
+        if not en_data:
+            continue
 
-        # Check if any target language is missing or has missing keys
+        en_keys = set(en_data.keys())
+
+        # Check if any target language is missing or has mismatched keys
         for lang in TARGET_LANGUAGES:
-            lang_file = translations_dir / f"{lang}.json"
+            lang_data = data.get(lang)
 
-            # Missing file
-            if not lang_file.exists():
-                incomplete.append(str(translations_dir))
+            # Missing language
+            if lang_data is None:
+                incomplete.append(str(translations_file.parent))
                 break
 
-            # File exists but may be missing keys
-            with open(lang_file, encoding="utf-8") as f:
-                lang_keys = set(json.load(f).keys())
-
-            if en_keys != lang_keys:
-                incomplete.append(str(translations_dir))
+            # Language exists but keys don't match
+            if set(lang_data.keys()) != en_keys:
+                incomplete.append(str(translations_file.parent))
                 break
 
     return sorted(incomplete)
@@ -214,66 +242,66 @@ def find_incomplete_folders(src_root: str) -> list[str]:
 
 
 def generate_translations(
-    folder: Optional[str] = None, force: bool = False, generate_all: bool = False
+    path: Optional[str] = None, force: bool = False, generate_all: bool = False
 ) -> dict[str, Any]:
     """
-    Generate missing translation files
+    Generate missing translations in translations.json files
 
-    Generates missing translation files by translating en.json to all target languages.
-    Supports generating for a single folder or scanning all incomplete folders.
+    Translates English keys to all target languages using Google Translate.
+    Supports generating for a single component or scanning all incomplete files.
 
-    @param folder (Optional[str]): Path to a specific translations folder
-    @param force (bool): If True, regenerate even if file exists
-    @param generate_all (bool): If True, scan and generate for all incomplete folders
+    @param path (Optional[str]): Path to a specific component directory
+    @param force (bool): If True, regenerate even if language exists
+    @param generate_all (bool): If True, scan and generate for all incomplete files
     @returns dict[str, Any] - Response with generation results
     """
 
     logger.info("generate_translations called")
 
-    # Validate: require either folder or all, but not both
-    if not folder and not generate_all:
+    # Validate: require either path or all, but not both
+    if not path and not generate_all:
         return {
             "status": "error",
-            "message": "Must provide either 'folder' or 'all' parameter",
+            "message": "Must provide either 'path' or 'all' parameter",
             "folders_processed": 0,
             "files_generated": 0,
             "details": [],
         }
 
-    if folder and generate_all:
+    if path and generate_all:
         return {
             "status": "error",
-            "message": "Cannot provide both 'folder' and 'all' parameters",
+            "message": "Cannot provide both 'path' and 'all' parameters",
             "folders_processed": 0,
             "files_generated": 0,
             "details": [],
         }
 
-    # Single folder mode
-    if folder:
-        logger.info(f"Generating translations for: {folder}")
-        count = generate_translations_for_folder(folder, force=force)
+    # Single path mode
+    if path:
+        logger.info(f"Generating translations for: {path}")
+        count = generate_translations_for_folder(path, force=force)
 
         return {
             "status": "success",
-            "message": f"Generated {count} translation files for {folder}",
+            "message": f"Generated {count} translations for {path}",
             "folders_processed": 1,
             "files_generated": count,
-            "details": [{"folder": folder, "files_generated": count}],
+            "details": [{"folder": path, "files_generated": count}],
         }
 
     # All incomplete folders mode
     from dev.paths import FRONTEND_SRC
     src_root = FRONTEND_SRC
 
-    logger.info(f"Scanning for incomplete translation folders in {src_root}...")
+    logger.info(f"Scanning for incomplete translations in {src_root}...")
     folders = find_incomplete_folders(str(src_root))
 
-    # All folders are complete
+    # All files are complete
     if not folders:
         return {
             "status": "success",
-            "message": "All translation folders are complete",
+            "message": "All translation files are complete",
             "folders_processed": 0,
             "files_generated": 0,
             "details": [],
@@ -290,12 +318,12 @@ def generate_translations(
         details.append({"folder": folder_path, "files_generated": count})
 
     logger.info(
-        f"Done! Generated {total_generated} translation files across {len(folders)} folders"
+        f"Done! Updated {total_generated} languages across {len(folders)} files"
     )
 
     return {
         "status": "success",
-        "message": f"Generated {total_generated} translation files across {len(folders)} folders",
+        "message": f"Updated {total_generated} languages across {len(folders)} files",
         "folders_processed": len(folders),
         "files_generated": total_generated,
         "details": details,
@@ -305,16 +333,16 @@ def generate_translations(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate translation files")
     parser.add_argument("-s", "--staging", action="store_true", help="Use staging environment")
-    parser.add_argument("--folder", help="Path to a specific translations folder")
-    parser.add_argument("--force", action="store_true", help="Regenerate even if file exists")
+    parser.add_argument("--path", help="Path to a specific component directory")
+    parser.add_argument("--force", action="store_true", help="Regenerate even if language exists")
     parser.add_argument(
         "--all",
         action="store_true",
         dest="generate_all",
-        help="Generate for all incomplete folders",
+        help="Generate for all incomplete files",
     )
     args = parser.parse_args()
     result = generate_translations(
-        folder=args.folder, force=args.force, generate_all=args.generate_all
+        path=args.path, force=args.force, generate_all=args.generate_all
     )
     print(json.dumps(result, indent=2))

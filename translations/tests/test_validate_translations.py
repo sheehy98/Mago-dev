@@ -39,15 +39,15 @@ def test_validate_translations_returns_results():
 @pytest.mark.usefixtures("missing_language_files")
 def test_missing_language_files():
     """
-    Story: Validator detects missing language files
+    Story: Validator detects missing languages
 
-    Given a translations folder with only en.json
-    Then it reports missing_file issues
+    Given a translations.json with only English
+    Then it reports missing_language issues
     """
     data = validate_translations()
     issues = get_test_issues(data)
 
-    assert has_issue_type(issues, "missing_file")
+    assert has_issue_type(issues, "missing_language")
 
 
 @pytest.mark.usefixtures("key_mismatch")
@@ -55,7 +55,7 @@ def test_key_mismatch():
     """
     Story: Validator detects missing and extra keys
 
-    Given en.json has [hello, goodbye] and es.json has [hello, extra]
+    Given en has [hello, goodbye] and es has [hello, extra]
     Then it reports missing_key for goodbye and extra_key for extra
     """
     data = validate_translations()
@@ -70,7 +70,7 @@ def test_invalid_json():
     """
     Story: Validator detects malformed JSON
 
-    Given es.json has invalid JSON syntax
+    Given translations.json has invalid JSON syntax
     Then it reports json_parse_error
     """
     data = validate_translations()
@@ -82,9 +82,9 @@ def test_invalid_json():
 @pytest.mark.usefixtures("invalid_format")
 def test_invalid_format():
     """
-    Story: Validator detects non-dict JSON
+    Story: Validator detects non-dict language entry
 
-    Given es.json is an array instead of object
+    Given es entry is an array instead of object
     Then it reports invalid_format
     """
     data = validate_translations()
@@ -111,10 +111,10 @@ def test_invalid_key_value():
 @pytest.mark.usefixtures("component_uses_translations_no_folder")
 def test_component_missing_translations_folder():
     """
-    Story: Validator detects component using translations without folder
+    Story: Validator detects component using translations without file
 
     Given a component imports useTranslation
-    And no translations folder exists
+    And no translations.json exists
     Then it reports component_missing_translations
     """
     data = validate_translations()
@@ -157,7 +157,7 @@ def test_component_missing_key():
     """
     Story: Validator detects missing translation keys in component
 
-    Given component uses t('missing_key') but en.json doesn't have it
+    Given component uses t('missing_key') but translations.json doesn't have it
     Then it reports component_missing_key
     """
     data = validate_translations()
@@ -197,9 +197,9 @@ def test_component_aliased_translation_function():
 @pytest.mark.usefixtures("orphaned_translation_folder")
 def test_orphaned_translation_folder():
     """
-    Story: Validator detects orphaned translation folders
+    Story: Validator detects orphaned translation files
 
-    Given translations folder exists with content
+    Given translations.json exists with content
     And component doesn't use translations
     Then it reports orphaned_translation_folder
     """
@@ -219,9 +219,7 @@ def test_component_with_hardcoded_text_uses_translations(test_base_dir):
     """
     test_base_dir.mkdir(parents=True, exist_ok=True)
 
-    translations_dir = test_base_dir / "translations"
-    translations_dir.mkdir(parents=True, exist_ok=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
+    (test_base_dir / "translations.json").write_text(json.dumps({"en": {"hello": "Hello"}}))
 
     component = test_base_dir / "_test_translations.tsx"
     component.write_text("""
@@ -249,7 +247,7 @@ def test_global_translations_extra_key():
     """
     Story: Validator detects extra keys in global translations
 
-    Given en.json has a key not found in any seed CSV
+    Given translations.json has a key not found in any seed CSV
     Then it reports global_translations_extra_key
     """
     data = validate_translations()
@@ -269,7 +267,7 @@ def test_global_translations_missing_key(global_translations_missing_key):
     """
     Story: Validator detects missing keys in global translations
 
-    Given a seed CSV has a Name value not in en.json
+    Given a seed CSV has a Name value not in translations.json
     Then it reports global_translations_missing_key
     """
     # This fixture returns the removed key name
@@ -290,9 +288,9 @@ def test_global_translations_missing_key(global_translations_missing_key):
 @pytest.mark.usefixtures("global_translations_file_missing")
 def test_global_translations_file_missing():
     """
-    Story: Validator detects missing global en.json file
+    Story: Validator detects missing global translations.json file
 
-    Given the global translations en.json file does not exist
+    Given the global translations.json file does not exist
     Then it reports global_translations_missing
     """
     data = validate_translations()
@@ -326,9 +324,9 @@ def test_seed_csv_file_missing():
 @pytest.mark.usefixtures("global_translations_invalid_json")
 def test_global_translations_invalid_json():
     """
-    Story: Validator detects corrupted global en.json file
+    Story: Validator detects corrupted global translations.json file
 
-    Given the global translations en.json has invalid JSON
+    Given the global translations.json has invalid JSON
     Then it reports global_translations_missing with parse error
     """
     data = validate_translations()
@@ -347,16 +345,16 @@ def test_global_translations_invalid_json():
 @pytest.mark.usefixtures("orphaned_translation_folder_no_component")
 def test_orphaned_folder_no_component():
     """
-    Story: Validator detects orphaned translation folder with no component
+    Story: Validator detects orphaned translations.json with no component
 
-    Given a translations folder exists
-    And there is no component file in the parent directory
+    Given a translations.json exists
+    And there is no component file in the directory
     Then it reports orphaned_translation_folder with "no component found"
     """
     data = validate_translations()
     issues = get_test_issues(data)
 
-    # Should find the orphaned folder
+    # Should find the orphaned file
     orphaned_issues = [i for i in issues if i.get("type") == "orphaned_translation_folder"]
     assert len(orphaned_issues) == 1
     assert "no component found" in orphaned_issues[0].get("message", "")
@@ -387,15 +385,15 @@ def test_orphaned_folder_nonstandard_component_name():
     """
     Story: Validator finds component via fallback glob search
 
-    Given a translations folder exists in a subdirectory
-    And the component file has a non-standard name (Main.tsx instead of folder_name.tsx or index.tsx)
+    Given a translations.json exists in a subdirectory
+    And the component file has a non-standard name (Main.tsx)
     Then the validator uses fallback glob search to find the component
     And it reports orphaned_translation_folder since component doesn't use translations
     """
     data = validate_translations()
     issues = get_test_issues(data)
 
-    # Should find the orphaned folder using fallback glob search
+    # Should find the orphaned file using fallback glob search
     orphaned_issues = [i for i in issues if i.get("type") == "orphaned_translation_folder"]
     assert len(orphaned_issues) == 1
     # The message should indicate component found but not using translations
@@ -407,16 +405,16 @@ def test_orphaned_folder_nonstandard_component_name():
 @pytest.mark.usefixtures("orphaned_translation_folder_no_tsx_files")
 def test_orphaned_folder_no_tsx_files():
     """
-    Story: Validator handles translation folder with no component files
+    Story: Validator handles translations.json with no component files
 
-    Given a translations folder exists in a subdirectory
-    And there are no .tsx or .ts files in the parent directory (only .css, .md, etc.)
+    Given a translations.json exists in a subdirectory
+    And there are no .tsx or .ts files in the directory (only .css, .md, etc.)
     Then the validator reports orphaned_translation_folder with "no component found"
     """
     data = validate_translations()
     issues = get_test_issues(data)
 
-    # Should find the orphaned folder
+    # Should find the orphaned file
     orphaned_issues = [i for i in issues if i.get("type") == "orphaned_translation_folder"]
     assert len(orphaned_issues) == 1
     # Should say no component found since there are no .tsx/.ts files
@@ -428,17 +426,16 @@ def test_orphaned_folder_no_tsx_files():
 @pytest.mark.usefixtures("empty_translation_folder")
 def test_empty_translation_folder():
     """
-    Story: Validator skips empty translation folders
+    Story: Validator skips empty translations.json files
 
-    Given a translations folder exists
-    And it contains no JSON files at all
+    Given a translations.json exists
+    And it contains an empty JSON object
     Then the validator silently skips it (not an error)
     """
     data = validate_translations()
     issues = get_test_issues(data)
 
-    # Should NOT report any issues for the empty folder
-    # (empty translation folders are silently skipped, not errors)
+    # Should NOT report any issues for the empty file
     assert len(issues) == 0
 
 
@@ -475,18 +472,17 @@ def test_test_tsx_file_excluded():
 @pytest.mark.usefixtures("translation_folder_missing_en_json")
 def test_translation_folder_missing_en_json():
     """
-    Story: Validator handles translation folder missing en.json
+    Story: Validator handles translations.json missing English
 
-    Given a translations folder exists with es.json
-    But en.json (the reference file) is missing
-    Then it reports missing_file for en.json
-    And skips key validation (no reference to compare against)
+    Given a translations.json exists with es
+    But en (the reference language) is missing
+    Then it reports missing_language for en
     """
     data = validate_translations()
     issues = get_test_issues(data)
 
-    # Should report en.json is missing
+    # Should report en is missing
     missing_en = [
-        i for i in issues if i.get("type") == "missing_file" and i.get("language") == "en"
+        i for i in issues if i.get("type") == "missing_language" and i.get("language") == "en"
     ]
     assert len(missing_en) == 1

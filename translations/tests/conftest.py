@@ -39,7 +39,7 @@ def redirect_frontend_src(tmp_path: Path) -> Path:
 
 
 def redirect_project_root(tmp_path: Path) -> Path:
-    """Copy seed CSVs and global en.json to tmp_path, swap PROJECT_ROOT + FRONTEND_SRC"""
+    """Copy seed CSVs and global translations.json to tmp_path, swap PROJECT_ROOT + FRONTEND_SRC"""
     project = tmp_path / "project"
 
     # Copy seed CSVs
@@ -51,15 +51,15 @@ def redirect_project_root(tmp_path: Path) -> Path:
             dest / "seed.csv",
         )
 
-    # Copy global en.json
-    en_dest = (
+    # Copy global translations.json
+    translations_dest = (
         project / "frontend" / "src"
-        / "providers" / "TranslationProvider" / "translations"
+        / "providers" / "TranslationProvider"
     )
-    en_dest.mkdir(parents=True)
+    translations_dest.mkdir(parents=True)
     shutil.copy2(
-        REAL_FRONTEND_SRC / "providers" / "TranslationProvider" / "translations" / "en.json",
-        en_dest / "en.json",
+        REAL_FRONTEND_SRC / "providers" / "TranslationProvider" / "translations.json",
+        translations_dest / "translations.json",
     )
 
     paths.PROJECT_ROOT = project
@@ -90,96 +90,100 @@ def has_issue_type(issues: list, issue_type: str) -> bool:
 
 @pytest.fixture
 def folder_with_all_languages(tmp_path):
-    """Translations folder with all language files (complete)"""
+    """Component directory with translations.json containing all languages"""
     src = redirect_frontend_src(tmp_path)
     from dev.translations.generate_translations import TARGET_LANGUAGES
 
-    translations_dir = src / "_test_generate_translations" / "translations"
-    translations_dir.mkdir(parents=True)
+    component_dir = src / "_test_generate_translations"
+    component_dir.mkdir(parents=True)
 
-    # Create en.json
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
-
-    # Create all target language files
+    # Create translations.json with en + all target languages
+    data = {"en": {"hello": "Hello"}}
     for lang in TARGET_LANGUAGES:
-        (translations_dir / f"{lang}.json").write_text(json.dumps({"hello": f"Hello in {lang}"}))
+        data[lang] = {"hello": f"Hello in {lang}"}
 
-    yield str(translations_dir)
+    (component_dir / "translations.json").write_text(json.dumps(data))
+
+    yield str(component_dir)
 
     restore_paths()
 
 
 @pytest.fixture
 def folder_without_en_json(tmp_path):
-    """Translations folder without en.json"""
+    """Component directory with translations.json that has no English key"""
     src = redirect_frontend_src(tmp_path)
 
-    translations_dir = src / "_test_generate_translations" / "translations"
-    translations_dir.mkdir(parents=True)
+    component_dir = src / "_test_generate_translations"
+    component_dir.mkdir(parents=True)
 
-    # Create es.json but not en.json
-    (translations_dir / "es.json").write_text(json.dumps({"hello": "Hola"}))
+    # Create translations.json with only es (no en)
+    (component_dir / "translations.json").write_text(json.dumps({"es": {"hello": "Hola"}}))
 
-    yield str(translations_dir)
+    yield str(component_dir)
 
     restore_paths()
 
 
 @pytest.fixture
 def folder_with_empty_en_json(tmp_path):
-    """Translations folder with empty en.json"""
+    """Component directory with translations.json that has empty English"""
     src = redirect_frontend_src(tmp_path)
 
-    translations_dir = src / "_test_generate_translations" / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({}))
+    component_dir = src / "_test_generate_translations"
+    component_dir.mkdir(parents=True)
+    (component_dir / "translations.json").write_text(json.dumps({"en": {}}))
 
-    yield str(translations_dir)
+    yield str(component_dir)
 
     restore_paths()
 
 
 @pytest.fixture
 def folder_without_en_json_for_all(tmp_path):
-    """Translations folder without en.json for use with all=True"""
+    """Component directory with translations.json that has no English key, for use with all=True"""
     src = redirect_frontend_src(tmp_path)
 
-    translations_dir = src / "_test_generate_translations" / "translations"
-    translations_dir.mkdir(parents=True)
+    component_dir = src / "_test_generate_translations"
+    component_dir.mkdir(parents=True)
 
-    # Create only es.json, no en.json
-    (translations_dir / "es.json").write_text(json.dumps({"hello": "Hola"}))
+    # Create translations.json with only es (no en)
+    (component_dir / "translations.json").write_text(json.dumps({"es": {"hello": "Hola"}}))
 
-    yield str(translations_dir)
+    yield str(component_dir)
 
     restore_paths()
 
 
 @pytest.fixture
 def folder_with_en_json_only(tmp_path):
-    """Translations folder with only en.json (needs generation)"""
+    """Component directory with translations.json containing only English (needs generation)"""
     src = redirect_frontend_src(tmp_path)
 
-    translations_dir = src / "_test_generate_translations" / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello", "goodbye": "Goodbye"}))
+    component_dir = src / "_test_generate_translations"
+    component_dir.mkdir(parents=True)
+    (component_dir / "translations.json").write_text(
+        json.dumps({"en": {"hello": "Hello", "goodbye": "Goodbye"}})
+    )
 
-    yield str(translations_dir)
+    yield str(component_dir)
 
     restore_paths()
 
 
 @pytest.fixture
 def translations_file_not_dir(tmp_path):
-    """A file named 'translations' (not a directory) to test is_dir() check"""
+    """A directory named 'translations.json' (not a file) to test is_file() check"""
     src = redirect_frontend_src(tmp_path)
 
     base = src / "_test_generate_translations"
     base.mkdir(parents=True)
-    translations_file = base / "translations"
-    translations_file.write_text("This is a file, not a directory")
 
-    yield str(translations_file)
+    # Create a directory named translations.json (not a file)
+    translations_dir = base / "translations.json"
+    translations_dir.mkdir()
+
+    yield str(base)
 
     restore_paths()
 
@@ -201,87 +205,86 @@ def test_base_dir(tmp_path):
 
 @pytest.fixture
 def missing_language_files(tmp_path):
-    """Translations folder with only en.json (missing all other languages)"""
+    """translations.json with only English (missing all other languages)"""
     src = redirect_frontend_src(tmp_path)
 
-    translations_dir = src / "_test_translations" / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
+    test_dir = src / "_test_translations"
+    test_dir.mkdir(parents=True)
+    (test_dir / "translations.json").write_text(json.dumps({"en": {"hello": "Hello"}}))
 
-    yield translations_dir
+    yield test_dir
 
     restore_paths()
 
 
 @pytest.fixture
 def key_mismatch(tmp_path):
-    """Translations where es.json is missing a key and has an extra key"""
+    """translations.json where es is missing a key and has an extra key"""
     src = redirect_frontend_src(tmp_path)
 
-    translations_dir = src / "_test_translations" / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello", "goodbye": "Goodbye"}))
-    (translations_dir / "es.json").write_text(
-        json.dumps({"hello": "Hola", "extra": "Extra"})
-    )  # missing goodbye, has extra
+    test_dir = src / "_test_translations"
+    test_dir.mkdir(parents=True)
+    (test_dir / "translations.json").write_text(json.dumps({
+        "en": {"hello": "Hello", "goodbye": "Goodbye"},
+        "es": {"hello": "Hola", "extra": "Extra"},
+    }))
 
-    yield translations_dir
+    yield test_dir
 
     restore_paths()
 
 
 @pytest.fixture
 def invalid_json(tmp_path):
-    """Translations with malformed JSON"""
+    """translations.json with malformed JSON"""
     src = redirect_frontend_src(tmp_path)
 
-    translations_dir = src / "_test_translations" / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
-    (translations_dir / "es.json").write_text('{"hello": "Hola"')  # Missing closing brace
+    test_dir = src / "_test_translations"
+    test_dir.mkdir(parents=True)
+    (test_dir / "translations.json").write_text('{"en": {"hello": "Hello"}')  # Missing closing brace
 
-    yield translations_dir
+    yield test_dir
 
     restore_paths()
 
 
 @pytest.fixture
 def invalid_format(tmp_path):
-    """Translations where JSON is not a dict (array instead)"""
+    """translations.json where a language entry is not a dict (array instead)"""
     src = redirect_frontend_src(tmp_path)
 
-    translations_dir = src / "_test_translations" / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
-    (translations_dir / "es.json").write_text(json.dumps(["hello", "hola"]))  # Array, not dict
+    test_dir = src / "_test_translations"
+    test_dir.mkdir(parents=True)
+    (test_dir / "translations.json").write_text(json.dumps({
+        "en": {"hello": "Hello"},
+        "es": ["hello", "hola"],
+    }))
 
-    yield translations_dir
+    yield test_dir
 
     restore_paths()
 
 
 @pytest.fixture
 def invalid_key_value(tmp_path):
-    """Translations with empty key and empty value"""
+    """translations.json with empty key and empty value"""
     src = redirect_frontend_src(tmp_path)
 
-    translations_dir = src / "_test_translations" / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(
-        json.dumps({"hello": "Hello", "": "Empty key", "empty_value": ""})
-    )
-    (translations_dir / "es.json").write_text(
-        json.dumps({"hello": "Hola", "": "Clave vacia", "empty_value": ""})
-    )
+    test_dir = src / "_test_translations"
+    test_dir.mkdir(parents=True)
+    (test_dir / "translations.json").write_text(json.dumps({
+        "en": {"hello": "Hello", "": "Empty key", "empty_value": ""},
+        "es": {"hello": "Hola", "": "Clave vacia", "empty_value": ""},
+    }))
 
-    yield translations_dir
+    yield test_dir
 
     restore_paths()
 
 
 @pytest.fixture
 def component_uses_translations_no_folder(tmp_path):
-    """Component that imports useTranslation but has no translations folder"""
+    """Component that imports useTranslation but has no translations.json"""
     src = redirect_frontend_src(tmp_path)
 
     test_base = src / "_test_translations"
@@ -334,10 +337,8 @@ def component_with_path_mismatch(tmp_path):
     test_base = src / "_test_translations"
     test_base.mkdir(parents=True)
 
-    # Create translations folder so we don't get missing_translations error
-    translations_dir = test_base / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
+    # Create translations.json so we don't get missing_translations error
+    (test_base / "translations.json").write_text(json.dumps({"en": {"hello": "Hello"}}))
 
     component = test_base / "_test_translations.tsx"
     component.write_text("""
@@ -356,15 +357,13 @@ export function TestComponent() {
 
 @pytest.fixture
 def component_with_missing_key(tmp_path):
-    """Component uses translation key that doesn't exist in en.json"""
+    """Component uses translation key that doesn't exist in translations.json"""
     src = redirect_frontend_src(tmp_path)
 
     test_base = src / "_test_translations"
     test_base.mkdir(parents=True)
 
-    translations_dir = test_base / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
+    (test_base / "translations.json").write_text(json.dumps({"en": {"hello": "Hello"}}))
 
     component = test_base / "_test_translations.tsx"
     component.write_text("""
@@ -389,9 +388,7 @@ def component_with_duplicate_use_translation(tmp_path):
     test_base = src / "_test_translations"
     test_base.mkdir(parents=True)
 
-    translations_dir = test_base / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
+    (test_base / "translations.json").write_text(json.dumps({"en": {"hello": "Hello"}}))
 
     component = test_base / "_test_translations.tsx"
     component.write_text("""
@@ -417,9 +414,7 @@ def component_with_aliased_t(tmp_path):
     test_base = src / "_test_translations"
     test_base.mkdir(parents=True)
 
-    translations_dir = test_base / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
+    (test_base / "translations.json").write_text(json.dumps({"en": {"hello": "Hello"}}))
 
     component = test_base / "_test_translations.tsx"
     component.write_text("""
@@ -438,16 +433,14 @@ export function TestComponent() {
 
 @pytest.fixture
 def orphaned_translation_folder(tmp_path):
-    """Translation folder exists but component doesn't use translations"""
+    """translations.json exists but component doesn't use translations"""
     src = redirect_frontend_src(tmp_path)
 
     test_base = src / "_test_translations"
     test_base.mkdir(parents=True)
 
-    # Create translations with content
-    translations_dir = test_base / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
+    # Create translations.json with content
+    (test_base / "translations.json").write_text(json.dumps({"en": {"hello": "Hello"}}))
 
     # Create component that does NOT use translations
     component = test_base / "_test_translations.tsx"
@@ -457,24 +450,24 @@ export function TestComponent() {
 }
 """)
 
-    yield translations_dir
+    yield test_base
 
     restore_paths()
 
 
 @pytest.fixture
 def global_translations_extra_key(tmp_path):
-    """Add an extra key to a copy of global en.json that's not in any seed CSV"""
+    """Add an extra key to the English section of global translations.json"""
     project = redirect_project_root(tmp_path)
 
-    # Modify the copied en.json
-    en_json = (
+    # Modify the copied translations.json
+    translations_file = (
         project / "frontend" / "src"
-        / "providers" / "TranslationProvider" / "translations" / "en.json"
+        / "providers" / "TranslationProvider" / "translations.json"
     )
-    data = json.loads(en_json.read_text(encoding="utf-8"))
-    data["_test_extra_key_not_in_seed"] = "Test Value"
-    en_json.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    data = json.loads(translations_file.read_text(encoding="utf-8"))
+    data["en"]["_test_extra_key_not_in_seed"] = "Test Value"
+    translations_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
     yield
 
@@ -483,18 +476,20 @@ def global_translations_extra_key(tmp_path):
 
 @pytest.fixture
 def global_translations_missing_key(tmp_path):
-    """Remove a key from a copy of global en.json that exists in seed CSV"""
+    """Remove a key from the English section of global translations.json"""
     project = redirect_project_root(tmp_path)
 
-    # Modify the copied en.json
-    en_json = (
+    # Modify the copied translations.json
+    translations_file = (
         project / "frontend" / "src"
-        / "providers" / "TranslationProvider" / "translations" / "en.json"
+        / "providers" / "TranslationProvider" / "translations.json"
     )
-    data = json.loads(en_json.read_text(encoding="utf-8"))
-    first_key = list(data.keys())[0]
-    del data[first_key]
-    en_json.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    data = json.loads(translations_file.read_text(encoding="utf-8"))
+    en_data = data.get("en", {})
+    first_key = list(en_data.keys())[0]
+    del en_data[first_key]
+    data["en"] = en_data
+    translations_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
     yield first_key
 
@@ -503,15 +498,15 @@ def global_translations_missing_key(tmp_path):
 
 @pytest.fixture
 def global_translations_file_missing(tmp_path):
-    """Delete the global en.json from the copy"""
+    """Delete the global translations.json from the copy"""
     project = redirect_project_root(tmp_path)
 
     # Delete from the copy
-    en_json = (
+    translations_file = (
         project / "frontend" / "src"
-        / "providers" / "TranslationProvider" / "translations" / "en.json"
+        / "providers" / "TranslationProvider" / "translations.json"
     )
-    en_json.unlink()
+    translations_file.unlink()
 
     yield
 
@@ -534,15 +529,15 @@ def seed_csv_file_missing(tmp_path):
 
 @pytest.fixture
 def global_translations_invalid_json(tmp_path):
-    """Corrupt the global en.json copy with invalid JSON"""
+    """Corrupt the global translations.json copy with invalid JSON"""
     project = redirect_project_root(tmp_path)
 
     # Corrupt the copy
-    en_json = (
+    translations_file = (
         project / "frontend" / "src"
-        / "providers" / "TranslationProvider" / "translations" / "en.json"
+        / "providers" / "TranslationProvider" / "translations.json"
     )
-    en_json.write_text('{"invalid": "json"', encoding="utf-8")
+    translations_file.write_text('{"invalid": "json"', encoding="utf-8")
 
     yield
 
@@ -551,35 +546,31 @@ def global_translations_invalid_json(tmp_path):
 
 @pytest.fixture
 def orphaned_translation_folder_no_component(tmp_path):
-    """Translation folder exists but there's no component file at all"""
+    """translations.json exists but there's no component file at all"""
     src = redirect_frontend_src(tmp_path)
 
-    # Create a subdirectory with translations but no component
+    # Create a subdirectory with translations.json but no component
     orphan_dir = src / "_test_translations" / "orphan_subdir"
     orphan_dir.mkdir(parents=True)
 
-    translations_dir = orphan_dir / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
+    (orphan_dir / "translations.json").write_text(json.dumps({"en": {"hello": "Hello"}}))
 
-    # No component file created - just the translations folder
-    yield translations_dir
+    # No component file created
+    yield orphan_dir
 
     restore_paths()
 
 
 @pytest.fixture
 def orphaned_translation_folder_nonstandard_name(tmp_path):
-    """Translation folder with component that has non-standard name (not matching folder, not index)"""
+    """translations.json with component that has non-standard name"""
     src = redirect_frontend_src(tmp_path)
 
-    # Create a subdirectory with translations and a non-standard component name
+    # Create a subdirectory with translations.json and a non-standard component name
     orphan_dir = src / "_test_translations" / "nonstandard_subdir"
     orphan_dir.mkdir(parents=True)
 
-    translations_dir = orphan_dir / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
+    (orphan_dir / "translations.json").write_text(json.dumps({"en": {"hello": "Hello"}}))
 
     # Create component with non-standard name (not nonstandard_subdir.tsx, not index.tsx)
     component = orphan_dir / "Main.tsx"
@@ -589,43 +580,41 @@ export function Main() {
 }
 """)
 
-    yield translations_dir
+    yield orphan_dir
 
     restore_paths()
 
 
 @pytest.fixture
 def orphaned_translation_folder_no_tsx_files(tmp_path):
-    """Translation folder with no .tsx or .ts files in parent (only other file types)"""
+    """translations.json with no .tsx or .ts files in directory (only other file types)"""
     src = redirect_frontend_src(tmp_path)
 
-    # Create a subdirectory with translations but only non-component files
+    # Create a subdirectory with translations.json but only non-component files
     orphan_dir = src / "_test_translations" / "no_tsx_subdir"
     orphan_dir.mkdir(parents=True)
 
-    translations_dir = orphan_dir / "translations"
-    translations_dir.mkdir(parents=True)
-    (translations_dir / "en.json").write_text(json.dumps({"hello": "Hello"}))
+    (orphan_dir / "translations.json").write_text(json.dumps({"en": {"hello": "Hello"}}))
 
     # Create non-component files only (no .tsx or .ts)
     (orphan_dir / "styles.css").write_text(".test { color: red; }")
     (orphan_dir / "README.md").write_text("# Test")
 
-    yield translations_dir
+    yield orphan_dir
 
     restore_paths()
 
 
 @pytest.fixture
 def empty_translation_folder(tmp_path):
-    """Translation folder with no JSON files at all (empty directory)"""
+    """translations.json with empty object (no languages)"""
     src = redirect_frontend_src(tmp_path)
 
-    translations_dir = src / "_test_translations" / "translations"
-    translations_dir.mkdir(parents=True)
-    # Don't create any files - folder exists but is empty
+    test_dir = src / "_test_translations"
+    test_dir.mkdir(parents=True)
+    (test_dir / "translations.json").write_text(json.dumps({}))
 
-    yield translations_dir
+    yield test_dir
 
     restore_paths()
 
@@ -678,17 +667,14 @@ export function TestComponent() {
 
 @pytest.fixture
 def translation_folder_missing_en_json(tmp_path):
-    """Translation folder with es.json but no en.json (missing reference file)"""
+    """translations.json with es but no en key (missing reference language)"""
     src = redirect_frontend_src(tmp_path)
 
     test_base = src / "_test_translations"
     test_base.mkdir(parents=True)
 
-    translations_dir = test_base / "translations"
-    translations_dir.mkdir(parents=True)
-
-    # Create es.json but NOT en.json
-    (translations_dir / "es.json").write_text(json.dumps({"hello": "Hola"}))
+    # Create translations.json with only es (no en)
+    (test_base / "translations.json").write_text(json.dumps({"es": {"hello": "Hola"}}))
 
     # Create component that uses translations
     component = test_base / "_test_translations.tsx"
@@ -701,7 +687,7 @@ export function TestComponent() {
 }
 """)
 
-    yield translations_dir
+    yield test_base
 
     restore_paths()
 
