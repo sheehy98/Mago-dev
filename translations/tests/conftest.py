@@ -172,6 +172,26 @@ def folder_with_en_json_only(tmp_path):
 
 
 @pytest.fixture
+def folder_with_removable_keys(tmp_path):
+    """Component directory with translations.json containing multiple keys across languages"""
+    src = redirect_frontend_src(tmp_path)
+
+    component_dir = src / "_test_generate_translations"
+    component_dir.mkdir(parents=True)
+
+    data = {
+        "en": {"hello": "Hello", "goodbye": "Goodbye", "thanks": "Thanks"},
+        "es": {"hello": "Hola", "goodbye": "Adiós", "thanks": "Gracias"},
+        "fr": {"hello": "Bonjour", "goodbye": "Au revoir", "thanks": "Merci"},
+    }
+    (component_dir / "translations.json").write_text(json.dumps(data))
+
+    yield str(component_dir / "translations.json")
+
+    restore_paths()
+
+
+@pytest.fixture
 def translations_file_not_dir(tmp_path):
     """A directory named 'translations.json' (not a file) to test is_file() check"""
     src = redirect_frontend_src(tmp_path)

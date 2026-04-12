@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 # Module under test
-from dev.translations.generate_translations import generate_translations
+from dev.translations.generate_translations import generate_translations, remove_translation_keys
 
 #
 # Tests
@@ -163,3 +163,78 @@ def test_generate_translations_all_skips_translations_file(translations_file_not
     """
     data = generate_translations(generate_all=True)
     assert data["status"] == "success"
+
+
+#
+# Tests — remove_translation_keys
+#
+
+
+def test_remove_translation_keys_single_key(folder_with_removable_keys):
+    """
+    Story: Remove a single key from all languages
+
+    Given a translations.json with hello, goodbye, thanks in 3 languages
+    When I remove the "goodbye" key
+    Then it is removed from all languages and the file is updated
+    """
+    data = remove_translation_keys(folder_with_removable_keys, ["goodbye"])
+    assert data["status"] == "success"
+    assert data["removed"] == 3  # 3 languages
+
+    # Verify the file was updated
+    with open(folder_with_removable_keys) as f:
+        translations = json.load(f)
+    assert "goodbye" not in translations["en"]
+    assert "goodbye" not in translations["es"]
+    assert "goodbye" not in translations["fr"]
+    assert "hello" in translations["en"]
+    assert "thanks" in translations["en"]
+
+
+def test_remove_translation_keys_multiple_keys(folder_with_removable_keys):
+    """
+    Story: Remove multiple keys at once
+
+    Given a translations.json with hello, goodbye, thanks in 3 languages
+    When I remove "goodbye" and "thanks"
+    Then both are removed from all languages
+    """
+    data = remove_translation_keys(folder_with_removable_keys, ["goodbye", "thanks"])
+    assert data["status"] == "success"
+    assert data["removed"] == 6  # 2 keys x 3 languages
+
+    with open(folder_with_removable_keys) as f:
+        translations = json.load(f)
+    assert "goodbye" not in translations["en"]
+    assert "thanks" not in translations["es"]
+    assert "hello" in translations["fr"]
+
+
+def test_remove_translation_keys_nonexistent_key(folder_with_removable_keys):
+    """
+    Story: Removing a key that doesn't exist is a no-op
+
+    Given a translations.json with hello, goodbye, thanks
+    When I remove "nonexistent"
+    Then no keys are removed and the file is unchanged
+    """
+    data = remove_translation_keys(folder_with_removable_keys, ["nonexistent"])
+    assert data["status"] == "success"
+    assert data["removed"] == 0
+
+    with open(folder_with_removable_keys) as f:
+        translations = json.load(f)
+    assert len(translations["en"]) == 3
+
+
+def test_remove_translation_keys_invalid_file():
+    """
+    Story: Error when file does not exist
+
+    Given a path to a nonexistent file
+    When I try to remove keys
+    Then it returns an error
+    """
+    data = remove_translation_keys("/nonexistent/translations.json", ["hello"])
+    assert data["status"] == "error"
