@@ -71,8 +71,8 @@ def test_pull_model_success():
     Given a valid model name
     Then it pulls the model successfully
     """
-    # Use a small model that's likely already pulled
-    data = pull_model(models="llama3.2:3b")
+    # Use the model that's expected to be pulled in dev (matches meta.agent seed)
+    data = pull_model(models="llama3.1:8b")
     assert data["status"] == "success"
     assert data["models_pulled"] == 1
     assert data["results"][0]["status"] == "success"
